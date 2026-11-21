@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Moglia City – mini open world</title>
+<style>
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%;overflow:hidden;background:#111;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#fff;user-select:none;-webkit-user-select:none;touch-action:none}
+  #game canvas{display:block}
+  #loading,#intro{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:20}
+  #loading{background:#1b2430;font-size:18px;letter-spacing:.02em}
+  #intro{display:none;background:linear-gradient(180deg,rgba(10,14,20,.25),rgba(10,14,20,.8))}
+  .card{background:rgba(18,22,28,.88);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:28px 32px;max-width:560px;width:calc(100% - 32px);box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  h1{margin:0 0 2px;font-size:40px;line-height:1;letter-spacing:-.02em;font-weight:900}
+  h1 span{color:#ffb020}
+  .sub{opacity:.75;margin-bottom:18px}
+  .keys{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px;margin:14px 0 20px}
+  kbd{display:inline-block;min-width:24px;padding:2px 7px;border-radius:6px;background:#2c3440;border:1px solid #4a5464;border-bottom-width:3px;font:600 12px ui-monospace,monospace;text-align:center;color:#fff}
+  #play{width:100%;padding:14px;border:0;border-radius:12px;background:#ffb020;color:#1a1200;font-weight:800;font-size:18px;cursor:pointer}
+  #play:hover{filter:brightness(1.07)}
+  .missions{font-size:13px;opacity:.85;line-height:1.5}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:6px;vertical-align:middle}
+  .credit{font-size:11px;opacity:.5;margin-top:14px}
+  #hud{display:none;position:fixed;inset:0;pointer-events:none;z-index:5}
+  #minimap{position:absolute;right:18px;top:18px;width:210px;height:210px;border-radius:50%;box-shadow:0 6px 24px rgba(0,0,0,.45);border:3px solid rgba(255,255,255,.85)}
+  #street{position:absolute;right:18px;top:238px;width:210px;text-align:center;font-weight:700;font-size:14px;text-shadow:0 1px 3px #000,0 0 8px rgba(0,0,0,.6)}
+  #money{position:absolute;left:18px;top:16px;font:900 30px system-ui;color:#7dff9a;text-shadow:0 2px 0 #0a3d17,0 0 12px rgba(0,0,0,.5)}
+  #mission{position:absolute;left:18px;top:62px;max-width:380px;background:rgba(15,18,24,.78);border-left:4px solid #3fa9ff;border-radius:8px;padding:10px 14px;font-size:14px;line-height:1.45;display:none}
+  #mission .tm{font-weight:800;color:#ffd166}#mission .tm.low{color:#ff5a5a}
+  #speed{position:absolute;right:26px;bottom:22px;font:900 54px system-ui;text-shadow:0 3px 8px rgba(0,0,0,.6);display:none;text-align:right}
+  #speed small{font-size:18px;font-weight:700;opacity:.8}
+  #hint{position:absolute;left:50%;bottom:34px;transform:translateX(-50%);background:rgba(15,18,24,.75);padding:8px 16px;border-radius:20px;font-size:14px;opacity:0;transition:opacity .2s}
+  #toast{position:absolute;left:50%;top:18%;transform:translate(-50%,-10px);background:rgba(15,18,24,.85);padding:12px 22px;border-radius:12px;font-weight:700;font-size:17px;opacity:0;transition:all .3s;text-align:center;max-width:80vw}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+  #help{position:absolute;left:18px;bottom:16px;font-size:12px;opacity:.75;text-shadow:0 1px 2px #000}
+  #bigmap{position:fixed;inset:0;width:100%;height:100%;display:none;z-index:15;cursor:grab}
+  #touchui{display:none}
+  body.touch #touchui{display:block}
+  body.touch #help{display:none}
+  #stick{position:fixed;left:26px;bottom:26px;width:130px;height:130px;border-radius:50%;background:rgba(255,255,255,.12);border:2px solid rgba(255,255,255,.3);pointer-events:auto;z-index:6}
+  #knob{position:absolute;left:40px;top:40px;width:50px;height:50px;border-radius:50%;background:rgba(255,255,255,.55)}
+  .tb{position:fixed;width:64px;height:64px;border-radius:50%;background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.35);font-size:26px;display:flex;align-items:center;justify-content:center;pointer-events:auto;z-index:6}
+  #btnE{right:24px;bottom:120px}#btnJ{right:100px;bottom:40px}#btnH{right:24px;bottom:200px;width:52px;height:52px;font-size:20px}#btnM{right:240px;top:24px;width:46px;height:46px;font-size:18px}
+  body.touch #speed{bottom:auto;top:270px;font-size:36px}
+  @media (max-width:700px){#minimap{width:150px;height:150px}#street{width:150px;top:176px;font-size:12px}#money{font-size:22px}#mission{max-width:58vw;font-size:12px;top:48px}h1{font-size:30px}.card{padding:20px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="loading"><div style="font-size:42px;font-weight:900;margin-bottom:10px">Moglia <span style="color:#ffb020">City</span></div><div id="loadmsg">Carico la mappa…</div></div>
+<div id="intro"><div class="card">
+  <h1>Moglia <span>City</span></h1>
+  <div class="sub">Un mini open world nelle vie vere di Moglia (MN)</div>
+  <div class="keys">
+    <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>cammina · guida (anche frecce)</span>
+    <span><kbd>Mouse</kbd></span><span>guarda intorno (clic per bloccare il cursore)</span>
+    <span><kbd>Shift</kbd></span><span>corri</span>
+    <span><kbd>E</kbd></span><span>sali / scendi da un veicolo</span>
+    <span><kbd>Spazio</kbd></span><span>salta · freno a mano</span>
+    <span><kbd>H</kbd> <kbd>R</kbd></span><span>clacson · rimetti l'auto in strada</span>
+    <span><kbd>M</kbd> <kbd>C</kbd></span><span>mappa del paese · cambia telecamera</span>
+    <span><kbd>N</kbd> <kbd>U</kbd></span><span>nebbia della Bassa · audio</span>
+  </div>
+  <div class="missions">
+    <div><span class="dot" style="background:#ffb020"></span><b>Panificio Ada</b>: consegne del pane a tempo</div>
+    <div><span class="dot" style="background:#2ecc71"></span><b>Taxi di Moglia</b> (Piazza Marconi): accompagna i clienti</div>
+    <div><span class="dot" style="background:#e74c3c"></span><b>Giro di Moglia</b> (Piazza della Libertà): gara a tappe</div>
+  </div>
+  <div style="height:18px"></div>
+  <button id="play">Gioca</button>
+  <div class="credit">Strade, edifici e luoghi: © OpenStreetMap contributors, licenza ODbL. Facciate e altezze generate dove mancano i dati.</div>
+</div></div>
+<div id="hud">
+  <canvas id="minimap" width="420" height="420"></canvas>
+  <div id="street"></div>
+  <div id="money">0 €</div>
+  <div id="mission"></div>
+  <div id="speed"></div>
+  <div id="hint"></div>
+  <div id="toast"></div>
+  <div id="help">E sali/scendi · M mappa · N nebbia · C telecamera</div>
+  <div id="touchui">
+    <div id="stick"><div id="knob"></div></div>
+    <div class="tb" id="btnE">🚗</div>
+    <div class="tb" id="btnJ">⤒</div>
+    <div class="tb" id="btnH">📯</div>
+    <div class="tb" id="btnM">🗺️</div>
+  </div>
+</div>
+<canvas id="bigmap"></canvas>
+<script id="moglia-data" type="application/json">__DATA__</script>
+<script>__BUNDLE__</script>
+</body>
+</html>

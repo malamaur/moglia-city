@@ -1,0 +1,23 @@
+{
+  "name": "moglia-city",
+  "version": "0.2.0",
+  "description": "Mini open world 3D nel browser ambientato nelle vie reali di Moglia (MN), costruito con Three.js e dati OpenStreetMap",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node build.mjs --dev",
+    "build": "node build.mjs",
+    "data": "python3 tools/osm2json.py data/moglia.osm data/moglia.json",
+    "fetch-osm": "sh tools/fetch-osm.sh",
+    "test": "node tests/smoke.mjs"
+  },
+  "keywords": ["threejs", "game", "openstreetmap", "moglia", "mantova", "webgl"],
+  "license": "MIT",
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.28.2",
+    "playwright": "^1.65.1"
+  }
+}
