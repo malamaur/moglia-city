@@ -92,6 +92,20 @@ Quattro personaggi proposti all'avvio, con statistica diversa:
 
 **Limite dichiarato:** non c'è ancora il multiplayer reale. Per giocare in due serve un backend (WebSocket/server autoritativo) e quindi hosting: il gioco oggi è un file statico senza servizi esterni. La schermata si chiama "Moglia Online" perché riproduce la selezione personaggio in stile GTA Online. Il multiplayer è la prossima decisione aperta.
 
+## Fisica, incidenti e veicoli
+
+Intervento del 22/11/2026, richiesto da Federico ("vorrei migliorare la fisica, gli incidenti, le macchine etc"):
+
+- **Masse e impulsi**: ogni veicolo ha una massa (utilitaria 950 kg, berlina 1350, sportiva 1200, furgone 2300, camion 6500, autobus 11000, trattore 3200, apecar 450). Negli urti con il giocatore la quantità di moto si scambia tra i due mezzi, quindi un camion sposta un'utilitaria e non viceversa.
+- **Danni alle auto**: salute 0–100. Sopra i 50 km/h circa un urto fa danni seri; sotto i 15 km/h quasi nulla. Sotto 50 di salute esce fumo dal cofano, a 0 l'auto prende fuoco, esplode e resta un relitto annerito. Se il giocatore è dentro viene sbalzato fuori e subisce danni.
+- **Incidenti**: detriti con gravità e rimbalzo, scintille e fumo, ammortizzatore di camera, flash, esplosione con luce temporanea e suono. I pedoni vicini fuggono, il traffico si ferma e suona il clacson.
+- **Guida**: rollio in curva, beccheggio in accelerazione e frenata, stop che si accendono, stridio degli pneumatici e segni neri sull'asfalto in derapata o con il freno a mano.
+- **Nuovi veicoli**: sportiva (motore e tenuta superiori), camion e autobus, con modelli low-poly dedicati; camion e autobus circolano solo su strade principali/secondarie/terziarie.
+- **HUD**: terza barra sotto salute e armatura, visibile solo in auto, con la salute del mezzo. L'officina ripara auto e vernice, con costo proporzionale al danno.
+- **Test**: `npm test` verifica danni, massa e riparazione, oltre a tutto il resto.
+
+Limite dichiarato: resta una fisica custom arcade (cerchi di collisione, nessun rigid body). Il passo successivo naturale, se serve un salto di qualità, è integrare un motore fisico (Rapier) per sospensioni, ribaltamenti e deformazioni vere.
+
 ## Interazioni e luoghi
 
 | Interazione | Fonte del luogo |
@@ -157,3 +171,4 @@ Al 22/11/2026:
 3. **Interazioni per negozi OSM**: collegare i POI OSM a funzioni di gioco (es. comprare un panino da Panificio Ada, gelato da K2).
 4. **Ampliamento mappa**: le officine OSM più vicine (Falcin, Fabbricese) sono fuori dal riquadro attuale; per includerle va allargato il bbox, con aumento di peso e tempi di build.
 5. **Motore**: prova comparativa fatta con lo stesso GLB in Three.js e Godot 4 (Unity non misurato). Risultati in `docs/ENGINE-SPIKE.md`: la mappa si carica in pochi millisecondi ovunque, quindi il cambio motore si giustifica solo per editor e sistemi integrati, non per il caricamento. Decisione attuale: restare su Three.js finché il gioco è web e single-file.
+6. **Fisica vera**: se l'arcade attuale non basta, valutare Rapier (WASM) per rigid body, sospensioni e ribaltamenti. Costo: riscrittura della guida e dei pedoni, più ~1,5 MB di wasm.

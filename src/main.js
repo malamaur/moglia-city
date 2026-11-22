@@ -79,7 +79,7 @@ if (isTouch) document.body.classList.add('touch');
 }
 
 // ---------------- audio ----------------
-let AC = null, engOsc, engGain, engFilt;
+let AC = null, engOsc, engGain, engFilt, skidGain = null;
 function initAudio() {
   if (AC) return;
   try {
@@ -88,6 +88,14 @@ function initAudio() {
     engFilt = AC.createBiquadFilter(); engFilt.type = 'lowpass'; engFilt.frequency.value = 500;
     engGain = AC.createGain(); engGain.gain.value = 0;
     engOsc.connect(engFilt).connect(engGain).connect(AC.destination); engOsc.start();
+    // fruscio degli pneumatici in derapata
+    const nb = AC.createBuffer(1, AC.sampleRate, AC.sampleRate);
+    const nd = nb.getChannelData(0);
+    for (let i = 0; i < nd.length; i++) nd[i] = (Math.random() * 2 - 1) * 0.8;
+    const ns = AC.createBufferSource(); ns.buffer = nb; ns.loop = true;
+    const bp = AC.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = 1800; bp.Q.value = 5;
+    skidGain = AC.createGain(); skidGain.gain.value = 0;
+    ns.connect(bp).connect(skidGain).connect(AC.destination); ns.start();
   } catch (_) { AC = null; }
 }
 function beep(f, d, type = 'square', vol = 0.08) {
@@ -100,11 +108,19 @@ let muted = false;
 // ---------------- vehicles ----------------
 const vehicles = [];
 let starterCar = null, starterLabel = null;
-const TYPES = ['utilitaria', 'utilitaria', 'utilitaria', 'berlina', 'berlina', 'furgone', 'apecar', 'trattore', 'vigili'];
+const TYPES = ['utilitaria', 'utilitaria', 'utilitaria', 'berlina', 'berlina', 'furgone', 'apecar', 'trattore', 'sportiva', 'camion', 'autobus', 'vigili'];
+// massa indicativa in kg, usata per gli urti
+const MASS = { utilitaria: 950, berlina: 1350, sportiva: 1200, furgone: 2300, apecar: 450, trattore: 3200, vigili: 1450, camion: 6500, autobus: 11000 };
 function spawnVehicle(type, x, z, h) {
   const color = type === 'vigili' ? '#f4f6f7' : type === 'trattore' ? (R() < 0.5 ? '#2e7d32' : '#c0392b') : type === 'apecar' ? (R() < 0.5 ? '#2e86c1' : '#d4ac0d') : CAR_COLORS[Math.floor(R() * CAR_COLORS.length)];
   const vh = makeVehicle(type, color);
-  const car = { ...vh, x, z, h, vf: 0, vel: new THREE.Vector2(), steer: 0, ai: null, stun: 0, honkT: 0, y: 0, vy: 0, air: 0, tune: 0, speed: 0, baseSpec: { ...vh.spec } };
+  const car = {
+    ...vh, x, z, h, vf: 0, vel: new THREE.Vector2(), steer: 0, ai: null, stun: 0, honkT: 0,
+    y: 0, vy: 0, air: 0, tune: 0, speed: 0, baseSpec: { ...vh.spec },
+    health: 100, maxHealth: 100, mass: MASS[type] || 1000, dead: false, dmgCool: 0,
+    prevVf: 0, accel: 0, slip: 0, skidT: 0, smokeT: 0, wreckT: 0,
+  };
+  car.origColors = (vh.mesh.userData.bodyMats || []).map((m) => m.color.getHex());
   car.mesh.position.set(x, 0, z); car.mesh.rotation.y = h; scene.add(car.mesh);
   car.mesh.userData.wheels.forEach(w => w.rotation.order = 'YXZ');
   vehicles.push(car); return car;
@@ -146,6 +162,7 @@ function placeTraffic(car, minD, maxD) {
     const e = W.adj[v][Math.floor(R() * W.adj[v].length)];
     const t = car.type;
     if (t === 'trattore' && !['unclassified', 'tertiary', 'service', 'secondary'].includes(roadOf(e).t)) continue;
+    if ((t === 'camion' || t === 'autobus') && !['primary', 'secondary', 'tertiary'].includes(roadOf(e).t)) continue;
     const off = laneOff(e);
     const dx = vx(e.to) - vx(v), dz = vz(e.to) - vz(v), l = Math.hypot(dx, dz) || 1;
     car.x = vx(v) - dz / l * off; car.z = vz(v) + dx / l * off; car.h = Math.atan2(dx, dz);
@@ -674,7 +691,11 @@ function openGarage() {
   updateGarageUI();
 }
 function closeGarage() { garageOpen = false; $('garage').style.display = 'none'; }
-function paintCar(car, hex) { if (car && car.mesh) for (const m of car.mesh.userData.bodyMats || []) m.color.set(hex); }
+function paintCar(car, hex) {
+  if (!car || !car.mesh) return;
+  for (const m of car.mesh.userData.bodyMats || []) m.color.set(hex);
+  car.origColors = (car.mesh.userData.bodyMats || []).map((m) => m.color.getHex());
+}
 function tuneCar(car, lvl) {
   if (!car) return;
   car.tune = clamp(lvl, 0, 3);
@@ -685,7 +706,7 @@ function tuneCar(car, lvl) {
 const mechMul = () => CHARACTERS[charIdx].discount || 1;
 const paintCost = () => Math.round(50 * mechMul());
 const tuneCost = () => Math.round(150 * mechMul());
-const repairCost = () => Math.round(30 * mechMul());
+const repairCost = () => Math.round((30 + (P.car ? (100 - P.car.health) * 0.6 : 0)) * mechMul());
 function updateGarageUI() {
   if (!P.car) return;
   const names = { utilitaria: 'Utilitaria', berlina: 'Berlina', furgone: 'Furgone', apecar: 'Motocarro', trattore: 'Trattore', vigili: 'Auto della Polizia Locale' };
@@ -715,7 +736,7 @@ function buyRepair() {
   if (!P.car) return;
   const cost = repairCost();
   if (money < cost) { hint('Ti servono ' + cost + ' €'); return; }
-  money -= cost; P.car.vf = 0; P.car.vel.set(0, 0); P.car.stun = 0; beep(420, 0.1);
+  money -= cost; P.car.vf = 0; P.car.vel.set(0, 0); P.car.stun = 0; repairCar(P.car); beep(420, 0.1);
   toast('🧰 Auto rimessa a nuovo (−' + cost + ' €)', 1400); updateGarageUI();
 }
 
@@ -920,6 +941,121 @@ function startMissionById(id) {
   startMission(g); closePhone();
 }
 
+// ---- danni, incidenti e particelle ----
+const smokeGeo = new THREE.SphereGeometry(0.55, 6, 5);
+const fireGeo = new THREE.SphereGeometry(0.7, 6, 5);
+const debrisGeo = new THREE.BoxGeometry(0.22, 0.14, 0.28);
+const skidGeo = new THREE.PlaneGeometry(0.32, 1.15); skidGeo.rotateX(-Math.PI / 2);
+const puffs = [], debris = [], skids = [];
+let boomLight = null, boomLightT = 0;
+
+function spawnPuff(x, y, z, fire) {
+  if (puffs.length > 150) return;
+  const mat = new THREE.MeshBasicMaterial({ color: fire ? '#ff7a1a' : '#3a3a3a', transparent: true, opacity: fire ? 0.9 : 0.45, depthWrite: false });
+  const m = new THREE.Mesh(fire ? fireGeo : smokeGeo, mat);
+  m.position.set(x + (R() - 0.5) * 0.8, y, z + (R() - 0.5) * 0.8);
+  m.scale.setScalar(0.6 + R() * 0.5);
+  m.renderOrder = 5;
+  scene.add(m);
+  puffs.push({ m, life: fire ? 0.5 + R() * 0.35 : 1.2 + R() * 0.7, vy: fire ? 2.0 : 1.0 + R(), fire });
+}
+function spawnDebris(x, z, power) {
+  const n = Math.min(10, 3 + Math.round(power * 8));
+  for (let i = 0; i < n && debris.length < 70; i++) {
+    const m = new THREE.Mesh(debrisGeo, new THREE.MeshLambertMaterial({ color: R() < 0.5 ? '#2b2b2b' : '#8d8d8d' }));
+    m.position.set(x + (R() - 0.5) * 1.4, 0.5 + R() * 0.8, z + (R() - 0.5) * 1.4);
+    m.rotation.set(R() * 3, R() * 3, R() * 3);
+    m.castShadow = true;
+    scene.add(m);
+    debris.push({ m, life: 2 + R(), vx: (R() - 0.5) * 8 * power, vy: 3 + R() * 5 * power, vz: (R() - 0.5) * 8 * power, rx: (R() - 0.5) * 12, rz: (R() - 0.5) * 12 });
+  }
+}
+function spawnCrashFx(power, x, z) {
+  spawnDebris(Math.min(1.5, Math.abs(power)), x, z);
+  for (let i = 0; i < 4; i++) spawnPuff(x, 0.8, z, false);
+  for (let i = 0; i < 3; i++) spawnPuff(x, 0.6, z, true);
+}
+function spawnSmoke(car, fire) {
+  spawnPuff(car.x, (car.y || 0) + car.spec.height * 0.7, car.z, fire);
+}
+function addSkid(x, z, h) {
+  if (skids.length > 140) { const old = skids.shift(); scene.remove(old.m); old.m.material.dispose(); }
+  const mat = new THREE.MeshBasicMaterial({ color: '#141414', transparent: true, opacity: 0.5, depthWrite: false });
+  const m = new THREE.Mesh(skidGeo, mat);
+  m.position.set(x, 0.09, z); m.rotation.y = h;
+  scene.add(m);
+  skids.push({ m, life: 6 });
+}
+function explosionAt(x, z) {
+  for (let i = 0; i < 10; i++) spawnPuff(x + (R() - 0.5) * 1.5, 1 + R() * 1.4, z + (R() - 0.5) * 1.5, true);
+  for (let i = 0; i < 8; i++) spawnPuff(x + (R() - 0.5) * 2.0, 1.2 + R() * 1.6, z + (R() - 0.5) * 2.0, false);
+  spawnDebris(x, z, 1.5);
+  shake = Math.min(1.4, shake + 0.9);
+  flash('rgba(255,140,30,.25)');
+  beep(55, 0.7, 'sawtooth', 0.2); beep(95, 0.45, 'square', 0.1);
+  if (!boomLight) { boomLight = new THREE.PointLight('#ff8a2a', 0, 50, 2); scene.add(boomLight); }
+  boomLight.position.set(x, 2.5, z); boomLight.intensity = 14; boomLightT = 0.7;
+}
+function damageCar(car, n, force) {
+  if (!car || car.dead || n <= 0) return 0;
+  if (!force && car.dmgCool > 0) return 0;
+  car.health = Math.max(0, car.health - n);
+  car.dmgCool = force ? 0 : 0.25;
+  if (car.health <= 0) wreckCar(car);
+  return n;
+}
+function wreckCar(car) {
+  if (car.dead) return;
+  const hadDriver = !!car.ai || !!car.cop || car === P.car;
+  car.dead = true; car.health = 0; car.vf = 0; car.vel.set(0, 0); car.stun = 0; car.ai = null;
+  if (car.cop) { const ci = cops.indexOf(car); if (ci >= 0) cops.splice(ci, 1); car.cop = false; }
+  if (car === P.car) {
+    const [fx, fz] = fwd(car.h);
+    P.x = car.x + fz * 1.9; P.z = car.z - fx * 1.9; P.y = 0; P.vy = 0;
+    P.car = null; player.visible = true;
+    damagePlayer(35);
+  } else if (hadDriver) {
+    const pd = spawnPed(); const [fx, fz] = fwd(car.h);
+    pd.x = car.x + fz * 2.2; pd.z = car.z - fx * 2.2; pd.ai = null; pd.fleeT = 5; pd.h = car.h;
+    say(pd, 'La mia macchina!', 2.5);
+  }
+  for (const m of car.mesh.userData.bodyMats || []) m.color.set('#2f2b28');
+  for (const p of peds) if (!p.down && Math.hypot(p.x - car.x, p.z - car.z) < 35) { p.fleeT = Math.max(p.fleeT || 0, 4); }
+  car.wreckT = 10;
+  explosionAt(car.x, car.z);
+  toast('💥 Auto distrutta!', 2200);
+}
+function repairCar(car) {
+  if (!car) return;
+  car.health = car.maxHealth; car.dead = false; car.wreckT = 0; car.stun = 0; car.smokeT = 0;
+  const cols = car.origColors || [];
+  (car.mesh.userData.bodyMats || []).forEach((m, i) => { if (cols[i] != null) m.color.setHex(cols[i]); });
+}
+function updateFx(dt) {
+  for (let i = puffs.length - 1; i >= 0; i--) {
+    const p = puffs[i]; p.life -= dt;
+    p.m.position.y += p.vy * dt; p.vy *= Math.max(0, 1 - dt * 0.6);
+    const s = p.m.scale.x + dt * (p.fire ? 1.0 : 0.7);
+    p.m.scale.setScalar(s);
+    p.m.material.opacity = Math.max(0, p.life) * (p.fire ? 0.55 : 0.3);
+    if (p.life <= 0) { scene.remove(p.m); p.m.material.dispose(); puffs.splice(i, 1); }
+  }
+  for (let i = debris.length - 1; i >= 0; i--) {
+    const d = debris[i]; d.life -= dt;
+    d.vy -= 18 * dt;
+    d.m.position.x += d.vx * dt; d.m.position.y += d.vy * dt; d.m.position.z += d.vz * dt;
+    d.m.rotation.x += d.rx * dt; d.m.rotation.z += d.rz * dt;
+    if (d.m.position.y < 0.12) { d.m.position.y = 0.12; d.vy *= -0.35; d.vx *= 0.7; d.vz *= 0.7; }
+    if (d.life <= 0) { scene.remove(d.m); d.m.material.dispose(); debris.splice(i, 1); }
+  }
+  for (let i = skids.length - 1; i >= 0; i--) {
+    const s = skids[i]; s.life -= dt;
+    s.m.material.opacity = Math.min(0.5, Math.max(0, s.life) * 0.1);
+    if (s.life <= 0) { scene.remove(s.m); s.m.material.dispose(); skids.splice(i, 1); }
+  }
+  if (boomLightT > 0) { boomLightT -= dt; if (boomLight) boomLight.intensity = Math.max(0, boomLightT / 0.7 * 14); }
+}
+
 // ---------------- HUD helpers ----------------
 let toastT = 0, hintT = 0;
 function toast(t, ms = 2800) { const el = $('toast'); el.textContent = t; el.classList.add('show'); toastT = ms / 1000; }
@@ -1114,6 +1250,11 @@ function updatePlayerCar(car, dt) {
   car.x += car.vel.x * dt; car.z += car.vel.y * dt;
   if (car.y < 1.2) collideCar(car, true);
   car.speed = Math.hypot(car.vel.x, car.vel.y);
+  const prevV = car.prevVf == null ? car.vf : car.prevVf;
+  const accel = (car.vf - prevV) / Math.max(dt, 1e-3);
+  car.accel += (clamp(accel, -30, 30) - car.accel) * Math.min(1, dt * 6);
+  car.prevVf = car.vf;
+  car.slip = Math.abs(car.vel.x * fz - car.vel.y * fx);
   if (car.y <= 0.06) stuntTick(car, dt);
   if (car.y > 0 || car.vy > 0) {
     car.vy -= 16 * dt;
@@ -1135,25 +1276,50 @@ function collideCar(car, isPlayer) {
     if (vn < 0) {
       car.vel.x -= nx * vn * 1.35; car.vel.y -= nz * vn * 1.35;
       const [fx, fz] = fwd(car.h); car.vf = (car.vel.x * fx + car.vel.y * fz) * 0.85;
-      if (-vn > 4) { shake = Math.min(1, -vn / 15); beep(70 + R() * 30, 0.18, 'sawtooth', Math.min(0.2, -vn / 60)); damagePlayer((-vn - 4) * 1.6); }
+      if (-vn > 4) {
+        shake = Math.min(1, -vn / 15);
+        beep(70 + R() * 30, 0.18, 'sawtooth', Math.min(0.2, -vn / 60));
+        damagePlayer((-vn - 4) * 1.6);
+        damageCar(car, (-vn - 4) * 4);
+        if (-vn > 8) spawnCrashFx(Math.min(1.2, -vn / 14), car.x, car.z);
+      }
     }
   }
   // vehicles against vehicles
   for (const o of vehicles) {
     if (o === car) continue;
-    const d0 = Math.hypot(o.x - car.x, o.z - car.z); if (d0 > 7) continue;
+    const d0 = Math.hypot(o.x - car.x, o.z - car.z); if (d0 > 14) continue;
     for (const a of carCircles(car)) for (const b of carCircles(o)) {
       const dx = a[0] - b[0], dz = a[1] - b[1], d = Math.hypot(dx, dz), m = a[2] + b[2];
       if (d < m && d > 1e-3) {
         const pen = (m - d), ux = dx / d, uz = dz / d;
-        const heavy = o.type === 'trattore' ? 0.85 : 0.5;
+        const heavy = (o.type === 'trattore' || o.type === 'camion' || o.type === 'autobus') ? 0.85 : o.type === 'furgone' ? 0.65 : 0.5;
         car.x += ux * pen * heavy; car.z += uz * pen * heavy;
         if (isPlayer) {
           o.x -= ux * pen * (1 - heavy); o.z -= uz * pen * (1 - heavy);
-          const vn = car.vel.x * ux + car.vel.y * uz;
-          if (vn < 0) { car.vel.x -= ux * vn * 1.2; car.vel.y -= uz * vn * 1.2; const [fx, fz] = fwd(car.h); car.vf = (car.vel.x * fx + car.vel.y * fz) * 0.8; if (-vn > 3) { shake = Math.min(1, -vn / 12); beep(90, 0.15, 'square', 0.06); } }
-          if (o.ai) { o.stun = 1.2; o.vf *= 0.3; if (o.honkT <= 0) { say(o, SHOUTS_HONK[Math.floor(R() * SHOUTS_HONK.length)]); o.honkT = 4; horn(); } }
-          else { o.h += (R() - 0.5) * pen * 0.2; }
+          const vn = (car.vel.x - (o.vel.x || 0)) * ux + (car.vel.y - (o.vel.y || 0)) * uz;
+          if (vn < 0) {
+            const m1 = car.mass || 1000, m2 = o.mass || 1000;
+            const j = -1.25 * vn / (1 / m1 + 1 / m2);
+            car.vel.x += ux * j / m1; car.vel.y += uz * j / m1;
+            const [fx, fz] = fwd(car.h); car.vf = (car.vel.x * fx + car.vel.y * fz) * 0.92;
+            if (o.ai || o.cop) {
+              o.vel.x -= ux * j / m2; o.vel.y -= uz * j / m2;
+              const [ofx, ofz] = fwd(o.h); o.vf = (o.vel.x * ofx + o.vel.y * ofz);
+              o.stun = Math.min(2, 0.8 + (-vn) * 0.05);
+            } else o.vf -= (j / m2) * 0.5;
+            const impact = -vn;
+            if (impact > 3) {
+              shake = Math.min(1, impact / 14);
+              beep(70 + R() * 30, 0.18, 'sawtooth', Math.min(0.22, impact / 55));
+              beep(180 + R() * 120, 0.1, 'square', 0.05);
+              damageCar(car, impact * 1.8 * (m2 / (m1 + m2)) * 1.9);
+              damageCar(o, impact * 1.8 * (m1 / (m1 + m2)) * 1.9);
+              if (impact > 6) spawnCrashFx(Math.min(1.2, impact / 12), (car.x + o.x) / 2, (car.z + o.z) / 2);
+            }
+          }
+          if (o.ai && (o.dead || o.stun > 0)) { if (o.honkT <= 0) { say(o, SHOUTS_HONK[Math.floor(R() * SHOUTS_HONK.length)]); o.honkT = 4; horn(); } }
+          else if (!o.ai && !o.dead) { o.h += (R() - 0.5) * pen * 0.2; }
         }
       }
     }
@@ -1341,12 +1507,44 @@ function loop(t) {
     if (P.car) { P.x = P.car.x; P.z = P.car.z; P.y = 0; }
   } else updatePlayerFoot(dt);
   for (const v of vehicles) {
-    if (v === P.car || v.gone) continue;
+    if (v.gone) continue;
+    if (v.dmgCool) v.dmgCool = Math.max(0, v.dmgCool - dt);
+    if (v === P.car) continue;
     if (v.hitCool) v.hitCool = Math.max(0, v.hitCool - dt);
+    if (v.dead) { v.vf = 0; v.vel.set(0, 0); continue; }
     if (v.cop) updateCop(v, dt);
     else if (v.ai) updateTraffic(v, dt);
     else if (v.vf) { v.vf *= Math.max(0, 1 - dt * 2); advanceCarKinematic(v, dt); collideCar(v, false); if (Math.abs(v.vf) < 0.1) v.vf = 0; }
   }
+  // fumo, fuoco e rottami dei veicoli danneggiati
+  for (const v of vehicles) {
+    if (v.gone) continue;
+    const dx = v.x - P.x, dz = v.z - P.z, d2 = dx * dx + dz * dz;
+    if (v.health < 50 && d2 < 160 * 160) {
+      v.smokeT = (v.smokeT || 0) - dt;
+      if (v.smokeT <= 0) { v.smokeT = v.dead ? 0.07 : 0.24; spawnSmoke(v, v.dead); }
+    }
+    if (v.dead) {
+      v.wreckT = (v.wreckT || 0) - dt;
+      if (v.wreckT <= 0 && v !== P.car && d2 > 80 * 80) v.gone = true;
+    }
+  }
+  // segni di gomma quando si slitta o si usa il freno a mano
+  if (P.car) {
+    const c = P.car;
+    const drifting = (c.slip || 0) > 3 || (keys.Space && c.speed > 4);
+    if (drifting) {
+      c.skidT = (c.skidT || 0) - dt;
+      if (c.skidT <= 0) {
+        c.skidT = 0.05;
+        const [fx, fz] = fwd(c.h); const sx = fz, sz = -fx;
+        const back = c.spec.len * 0.35, hw = c.spec.wid / 2 - 0.15;
+        addSkid(c.x - fx * back + sx * hw, c.z - fz * back + sz * hw, c.h);
+        addSkid(c.x - fx * back - sx * hw, c.z - fz * back - sz * hw, c.h);
+      }
+    } else c.skidT = 0;
+  }
+  updateFx(dt);
   for (let i = vehicles.length - 1; i >= 0; i--) if (vehicles[i].gone) { scene.remove(vehicles[i].mesh); if (P.car === vehicles[i]) P.car = null; vehicles.splice(i, 1); }
   for (const v of vehicles) {
     v.mesh.position.set(v.x, v.y || 0, v.z); v.mesh.rotation.y = v.h;
@@ -1354,8 +1552,15 @@ function loop(t) {
     ws.forEach((w, i) => { w.rotation.x += spin / w.scale.x; if (i < 2 && v.type !== 'trattore') w.rotation.y = v === P.car ? v.steer : 0; if (v.type === 'trattore' && i >= 2) w.rotation.y = 0; });
     if (v.type === 'apecar' && v === P.car) ws[0].rotation.y = v.steer;
     if (v.mesh.userData.siren) { const on = Math.floor(now * 6) % 2; v.mesh.userData.siren[0].material.color.set(on ? '#1e6bff' : '#0a1a40'); v.mesh.userData.siren[1].material.color.set(on ? '#0a1a40' : '#1e6bff'); }
-    // body roll
-    if (v === P.car) { v.mesh.rotation.z = clamp(-v.steer * v.speed * 0.012, -0.08, 0.08); }
+    // rollio, beccheggio e stop
+    if (v === P.car) {
+      v.mesh.rotation.z = clamp(-v.steer * v.speed * 0.012, -0.08, 0.08);
+      v.mesh.rotation.x = clamp(-(v.accel || 0) * 0.0035, -0.05, 0.05);
+      const braking = keys.KeyS || keys.ArrowDown || keys.Space;
+      for (const m of v.mesh.userData.tailMats || []) m.color.set(braking ? '#ff3a3a' : '#c01818');
+    } else {
+      v.mesh.rotation.x = 0; v.mesh.rotation.z = 0;
+    }
   }
   for (const p of peds) {
     updatePed(p, dt);
@@ -1405,6 +1610,7 @@ function loop(t) {
     if (P.car && !muted) { const s = P.car.speed || 0; const ty = P.car.type; const base = ty === 'trattore' ? 30 : ty === 'apecar' ? 70 : 45; engOsc.frequency.value = base + s * (ty === 'apecar' ? 7 : 3.2) + ((keys.KeyW || keys.ArrowUp) ? 12 : 0); engFilt.frequency.value = 300 + s * 25; engGain.gain.value = 0.035 + Math.min(0.03, s * 0.001); }
     else engGain.gain.value = 0;
   }
+  if (skidGain) skidGain.gain.value = (P.car && !muted && (P.car.slip || 0) > 3) ? Math.min(0.055, (P.car.slip || 0) * 0.011) : 0;
 
   // HUD
   streetT -= dt;
@@ -1414,6 +1620,8 @@ function loop(t) {
   if (P.car) $('speed').innerHTML = `${Math.round(P.car.speed * 3.6)}<small> km/h</small>`;
   const hpEl = $('hpfill'); if (hpEl) hpEl.style.width = Math.max(0, Math.min(100, hp / maxHp * 100)) + '%';
   const arEl = $('arfill'); if (arEl) arEl.style.width = armor + '%';
+  const carBarEl = $('carbar'); if (carBarEl) carBarEl.style.display = P.car ? 'block' : 'none';
+  const carFillEl = $('carfill'); if (carFillEl) carFillEl.style.width = (P.car ? Math.max(0, P.car.health) : 100) + '%';
   const wEl = $('wanted'); if (wEl) { wEl.textContent = wanted.level ? '★'.repeat(wanted.level) + '☆'.repeat(5 - wanted.level) : ''; wEl.style.opacity = wanted.level ? 1 : 0; }
   const pkEl = $('pickups'); if (pkEl) pkEl.textContent = '🥪 ' + stats.panini + '/' + panini.length;
   const rdEl = $('radio'); if (rdEl) { rdEl.style.display = P.car ? 'block' : 'none'; if (P.car && station >= 0) rdEl.textContent = '📻 ' + STATIONS[station].name; }
@@ -1486,7 +1694,7 @@ window.__game = {
   P, W, vehicles, peds, get fps() { return fps; }, keys, startMission, givers, camera,
   setYaw: (y) => camYaw = y, setPitch: (p) => { camPitch = p; lastMouse = now + 100; }, toggleCar,
   stats, wanted, cops, panini, stunts, pickups, garage, ACHIEVEMENTS, STATIONS, CHARACTERS, selectCharacter,
-  damage: damagePlayer, crime: setWanted, clearWanted, addMoney, tuneCar, paintCar, radioSwitch,
+  damage: damagePlayer, damageCar, repairCar, crime: setWanted, clearWanted, addMoney, tuneCar, paintCar, radioSwitch,
   get hp() { return hp; }, get armor() { return armor; }, get maxHp() { return maxHp; }, get charIdx() { return charIdx; }, get money() { return money; },
   get tod() { return tod; }, setTod: (t) => { tod = t; }, get sunIntensity() { return sun.intensity; },
   get starterCar() { return starterCar; },

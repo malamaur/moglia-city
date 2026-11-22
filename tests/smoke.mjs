@@ -93,6 +93,17 @@ const gar = await page.evaluate(() => {
 if (!gar.tuned || gar.hex !== 'ff00ff') await fail('officina: elaborazione o vernice non applicate');
 console.log('✓ officina e personalizzazione');
 
+const crash = await page.evaluate(() => {
+  const g = window.__game, c = g.P.car;
+  const before = c.health;
+  g.damageCar(c, 40, true);
+  const after = c.health;
+  g.repairCar(c);
+  return { before, after, repaired: c.health, mass: c.mass };
+});
+if (!(crash.after < crash.before) || crash.repaired !== 100 || !(crash.mass > 500)) await fail('danni/riparazione auto: ' + JSON.stringify(crash));
+console.log('✓ danni, massa e riparazione auto');
+
 await page.evaluate(() => window.__game.crime(2));
 await page.waitForTimeout(1500);
 const wanted = await page.evaluate(() => ({ lvl: window.__game.wanted.level, cops: window.__game.cops.length }));

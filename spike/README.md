@@ -22,6 +22,12 @@ npm run spike:godot  # copia il GLB, importa in Godot e stampa i tempi
 
 Risultati e interpretazione: [docs/ENGINE-SPIKE.md](../docs/ENGINE-SPIKE.md).
 
+## Provare le scene
+
+- Three.js: http://127.0.0.1:8123/three-loader/index.html dopo `python3 -m http.server 8123 --directory spike`; trascina per ruotare, rotella per zoom.
+- Godot: `godot --path spike/godot`; `WASD` vola, `Q`/`E` scende/sale, `Shift` accelera, clic e mouse per guardare, `Esc` esce.
+- Screenshot deterministico di Godot: `godot --path spike/godot --resolution 1280x800 -- --shot` scrive `/tmp/moglia-godot.png`.
+
 ## Limiti dichiarati
 
 - Il GLB contiene solo geometria con colori piatti: niente texture, alberi, landmark modellati, pedoni o veicoli.

@@ -50,6 +50,8 @@
   #bars .bar i{display:block;height:100%;width:100%;border-radius:7px;transition:width .2s}
   #bars .hp i{background:linear-gradient(90deg,#ff5b5b,#ff8a5b)}
   #bars .ar i{background:linear-gradient(90deg,#4a9bff,#7ad0ff)}
+  #bars .car i{background:linear-gradient(90deg,#ffb020,#ffe08a)}
+  #carbar{display:none}
   #clock{position:absolute;left:18px;top:91px;font:700 14px system-ui;opacity:.9;text-shadow:0 1px 3px #000}
   #pickups{position:absolute;left:50%;top:50px;transform:translateX(-50%);background:rgba(15,18,24,.7);padding:4px 12px;border-radius:14px;font-weight:700;font-size:13px}
   #radio{position:absolute;left:18px;bottom:42px;font:700 14px system-ui;display:none;background:rgba(15,18,24,.72);padding:6px 12px;border-radius:14px;border-left:3px solid #ffb020}
@@ -124,6 +126,7 @@
   <div id="bars">
     <div class="bar hp"><i id="hpfill"></i></div>
     <div class="bar ar"><i id="arfill"></i></div>
+    <div class="bar car" id="carbar"><i id="carfill"></i></div>
   </div>
   <div id="clock">☀️ 09:30</div>
   <div id="wanted"></div>

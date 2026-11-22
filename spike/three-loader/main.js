@@ -1,23 +1,54 @@
 // Carica spike/moglia.glb in Three.js e misura download, parsing e primo frame.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 const status = document.getElementById('status');
 const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true });
 renderer.setPixelRatio(Math.min(devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.0;
 document.body.appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color('#a9cbe6');
 scene.add(new THREE.HemisphereLight('#dfeeff', '#6b6a4a', 1.2));
-const sun = new THREE.DirectionalLight('#fff1d6', 2);
-sun.position.set(-600, 900, 400);
-scene.add(sun);
+const sun = new THREE.DirectionalLight('#fff1d6', 2.2);
+const sunDir = new THREE.Vector3(-0.55, 0.75, 0.38).normalize();
+sun.position.copy(sunDir).multiplyScalar(4000);
+sun.castShadow = true;
+sun.shadow.mapSize.set(4096, 4096);
+const sc = sun.shadow.camera;
+sc.left = -1700; sc.right = 1700; sc.top = 1700; sc.bottom = -1700; sc.near = 100; sc.far = 9000;
+sun.shadow.bias = -0.0006;
+sun.shadow.normalBias = 4;
+scene.add(sun, sun.target);
 
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 1, 20000);
 camera.position.set(1800, 1500, 2200);
 camera.lookAt(0, 0, 0);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.target.set(0, 0, 0);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.minDistance = 40;
+controls.maxDistance = 9000;
+controls.maxPolarAngle = Math.PI * 0.495;
+controls.update();
+let loopStarted = false;
+function startLoop() {
+  if (loopStarted) return;
+  loopStarted = true;
+  const tick = () => {
+    requestAnimationFrame(tick);
+    controls.update();
+    renderer.render(scene, camera);
+  };
+  tick();
+}
 addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight;
@@ -36,6 +67,8 @@ fetch('../moglia.glb')
       gltf.scene.traverse((o) => {
         if (!o.isMesh) return;
         meshes++;
+        o.castShadow = true;
+        o.receiveShadow = true;
         const g = o.geometry;
         triangles += (g.index ? g.index.count : g.attributes.position.count) / 3;
       });
@@ -54,7 +87,8 @@ fetch('../moglia.glb')
         triangles: Math.round(triangles),
         meshes,
       };
-      status.textContent = JSON.stringify(window.__result, null, 2);
+      status.textContent = JSON.stringify(window.__result, null, 2) + '\n\ntrascina per ruotare · rotella per zoom';
+      startLoop();
     }, (err) => {
       window.__result = { error: String((err && err.message) || err) };
       status.textContent = 'errore: ' + window.__result.error;

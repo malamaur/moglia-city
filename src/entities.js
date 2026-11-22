@@ -5,7 +5,7 @@ const box = (w, h, d, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(ne
 const lam = (c) => new THREE.MeshLambertMaterial({ color: c });
 const glass = new THREE.MeshPhongMaterial({ color: '#1d2a33', shininess: 120, specular: 0x99aabb });
 const tyre = lam('#1b1b1b'), rim = lam('#b9bcc0');
-const headM = new THREE.MeshBasicMaterial({ color: '#fff6d8' }), tailM = new THREE.MeshBasicMaterial({ color: '#c01818' });
+const HEAD_COLOR = '#fff6d8', TAIL_COLOR = '#c01818';
 const wheelGeo = new THREE.CylinderGeometry(0.36, 0.36, 0.26, 14); wheelGeo.rotateZ(Math.PI / 2);
 const rimGeo = new THREE.CylinderGeometry(0.2, 0.2, 0.28, 8); rimGeo.rotateZ(Math.PI / 2);
 
@@ -19,6 +19,8 @@ export const CAR_COLORS = ['#c0392b', '#2e86c1', '#f4f6f7', '#1c2833', '#7f8c8d'
 
 export function makeVehicle(type, color) {
   const g = new THREE.Group(); const body = lam(color); const wheels = [];
+  const headM = new THREE.MeshBasicMaterial({ color: HEAD_COLOR });
+  const tailM = new THREE.MeshBasicMaterial({ color: TAIL_COLOR });
   let spec, bodyMat = body;
   if (type === 'trattore') {
     const green = lam(color || '#2e7d32'); bodyMat = green;
@@ -39,6 +41,25 @@ export function makeVehicle(type, color) {
     [w1, w2, w3].forEach(w => { g.add(w); wheels.push(w); });
     g.add(box(0.2, 0.12, 0.05, headM, 0, 0.9, 1.67));
     spec = { len: 3.2, wid: 1.4, maxV: 13, acc: 3.5, steer: 0.7, height: 1.6 };
+  } else if (type === 'camion') {
+    g.add(box(2.2, 1.9, 2.3, body, 0, 1.55, 2.5));
+    g.add(box(1.9, 0.72, 0.05, glass, 0, 2.15, 3.66));
+    for (const sx of [1, -1]) g.add(box(0.05, 0.5, 0.9, glass, sx * 1.11, 2.05, 2.7));
+    g.add(box(2.35, 2.7, 5.0, lam('#d9dde0'), 0, 2.0, -1.15));
+    g.add(box(2.3, 0.25, 4.9, lam('#9aa0a6'), 0, 3.4, -1.15));
+    for (const [x, z] of [[-1.0, 2.5], [1.0, 2.5], [-1.0, -2.0], [1.0, -2.0], [-1.0, -3.2], [1.0, -3.2]]) { const w = wheel(x, z, 1.15); g.add(w); wheels.push(w); }
+    g.add(box(0.4, 0.16, 0.05, headM, 0.75, 0.95, 3.67)); g.add(box(0.4, 0.16, 0.05, headM, -0.75, 0.95, 3.67));
+    g.add(box(0.25, 0.35, 0.05, tailM, 0.9, 1.0, -3.66)); g.add(box(0.25, 0.35, 0.05, tailM, -0.9, 1.0, -3.66));
+    spec = { len: 7.6, wid: 2.5, maxV: 28, acc: 4.2, steer: 0.45, height: 3.5 };
+  } else if (type === 'autobus') {
+    g.add(box(2.45, 2.9, 10.2, body, 0, 1.65, 0));
+    for (const sx of [1, -1]) g.add(box(0.04, 0.9, 8.8, glass, sx * 1.23, 2.25, 0.1));
+    g.add(box(2.1, 1.1, 0.06, glass, 0, 2.1, 5.11));
+    g.add(box(2.1, 1.0, 0.06, glass, 0, 2.1, -5.11));
+    for (const [x, z] of [[-1.05, 3.4], [1.05, 3.4], [-1.05, -3.2], [1.05, -3.2], [-1.05, -4.1], [1.05, -4.1]]) { const w = wheel(x, z, 1.05); g.add(w); wheels.push(w); }
+    g.add(box(0.45, 0.18, 0.05, headM, 0.85, 0.9, 5.12)); g.add(box(0.45, 0.18, 0.05, headM, -0.85, 0.9, 5.12));
+    g.add(box(0.3, 0.4, 0.05, tailM, 0.9, 1.0, -5.12)); g.add(box(0.3, 0.4, 0.05, tailM, -0.9, 1.0, -5.12));
+    spec = { len: 10.2, wid: 2.5, maxV: 25, acc: 3.4, steer: 0.4, height: 3.4 };
   } else if (type === 'furgone') {
     g.add(box(1.95, 1.7, 4.8, body, 0, 1.3, 0));
     g.add(box(1.8, 0.6, 0.05, glass, 0, 1.75, 2.41));
@@ -48,8 +69,9 @@ export function makeVehicle(type, color) {
     g.add(box(0.2, 0.3, 0.05, tailM, 0.8, 0.9, -2.41)); g.add(box(0.2, 0.3, 0.05, tailM, -0.8, 0.9, -2.41));
     spec = { len: 4.8, wid: 2.0, maxV: 30, acc: 5, steer: 0.55, height: 2.2 };
   } else {
-    const sedan = type === 'berlina' || type === 'vigili';
-    const L = sedan ? 4.5 : 3.7, Wd = sedan ? 1.8 : 1.65;
+    const sport = type === 'sportiva';
+    const sedan = type === 'berlina' || type === 'vigili' || sport;
+    const L = sedan ? 4.5 : 3.7, Wd = sport ? 1.85 : (sedan ? 1.8 : 1.65);
     g.add(box(Wd, 0.62, L, body, 0, 0.66, 0));
     const cabL = sedan ? 2.3 : 2.2, cz = sedan ? -0.2 : -0.25;
     g.add(box(Wd - 0.12, 0.58, cabL, glass, 0, 1.25, cz));
@@ -60,6 +82,11 @@ export function makeVehicle(type, color) {
     g.add(box(0.38, 0.14, 0.05, headM, 0.55, 0.75, L / 2 + 0.01)); g.add(box(0.38, 0.14, 0.05, headM, -0.55, 0.75, L / 2 + 0.01));
     g.add(box(0.36, 0.14, 0.05, tailM, 0.58, 0.78, -L / 2 - 0.01)); g.add(box(0.36, 0.14, 0.05, tailM, -0.58, 0.78, -L / 2 - 0.01));
     g.add(box(Wd + 0.04, 0.16, 0.16, lam('#2a2a2a'), 0, 0.4, L / 2 - 0.05)); g.add(box(Wd + 0.04, 0.16, 0.16, lam('#2a2a2a'), 0, 0.4, -L / 2 + 0.05));
+    if (sport) {
+      g.add(box(Wd - 0.1, 0.06, 0.45, body, 0, 1.62, -L / 2 + 0.28));
+      for (const sx of [1, -1]) g.add(box(0.08, 0.24, 0.12, body, sx * (Wd / 2 - 0.14), 1.5, -L / 2 + 0.3));
+      g.add(box(Wd - 0.2, 0.05, 0.3, lam('#1a1a1a'), 0, 0.38, L / 2 + 0.02));
+    }
     if (type === 'vigili') {
       g.add(box(Wd + 0.02, 0.18, L - 0.6, lam('#1f5fa8'), 0, 0.72, 0));
       const bar = new THREE.Group(); bar.position.set(0, 1.7, cz);
@@ -67,11 +94,15 @@ export function makeVehicle(type, color) {
       const br = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.14, 0.25), new THREE.MeshBasicMaterial({ color: '#1e6bff' })); br.position.x = 0.3;
       bar.add(bl, br); g.add(bar); g.userData.siren = [bl, br];
     }
-    spec = sedan ? { len: 4.5, wid: 1.8, maxV: 46, acc: 8.5, steer: 0.6, height: 1.6 } : { len: 3.7, wid: 1.65, maxV: 38, acc: 7.5, steer: 0.65, height: 1.6 };
+    spec = sport ? { len: 4.5, wid: 1.85, maxV: 56, acc: 13, steer: 0.7, height: 1.55 }
+      : sedan ? { len: 4.5, wid: 1.8, maxV: 46, acc: 8.5, steer: 0.6, height: 1.6 }
+      : { len: 3.7, wid: 1.65, maxV: 38, acc: 7.5, steer: 0.65, height: 1.6 };
   }
   g.traverse(o => { if (o.isMesh) o.castShadow = true; });
   g.userData.wheels = wheels;
   g.userData.bodyMats = [bodyMat];
+  g.userData.headMats = [headM];
+  g.userData.tailMats = [tailM];
   return { mesh: g, spec, type };
 }
 

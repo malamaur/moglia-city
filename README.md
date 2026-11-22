@@ -8,7 +8,8 @@ Un mini open world 3D in terza persona, nel browser, ambientato nelle vie vere d
 
 - **Mappa reale**: 302 tratti di strada con nome e sensi unici, 1.920 edifici con la sagoma vera, canali, parchi, piazze e luoghi con nome, tutto da OpenStreetMap.
 - **Edifici ricostruiti a mano**: il Panificio Ada (con la casa in mattoni accanto) e il Municipio, modellati da foto.
-- **Gameplay**: si cammina, si corre e si salta. Si sale su qualunque veicolo: utilitarie, berline, furgoni, motocarri, trattori e auto della Polizia Locale.
+- **Gameplay**: si cammina, si corre e si salta. Si sale su qualunque veicolo: utilitarie, berline, sportive, furgoni, camion, autobus, motocarri, trattori e auto della Polizia Locale.
+- **Fisica e incidenti**: urti con scambio di quantità di moto in base alla massa, danni alle auto, fumo dal cofano, incendio ed esplosione con detriti, segni delle gomme in derapata, rollio e beccheggio, stop e clacson. La salute dell'auto appare in HUD e si ripara in officina.
 - **Vita in paese**: traffico che segue il grafo stradale e pedoni sui marciapiedi, che si scansano e brontolano in dialetto.
 - **Missioni**: consegne del pane (Panificio Ada), taxi (Piazza Marconi), Giro di Moglia a tappe (Piazza della Libertà).
 - **Moglia Online**: si sceglie l'omino tra quattro personaggi con statistiche diverse (velocità, salute, sconti, soldi).

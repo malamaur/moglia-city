@@ -66,6 +66,22 @@ La geometria è già esportabile, quindi il dato OSM non è un problema. Il lavo
 | Editor | no | sì, leggero | sì, pesante |
 | Test automatici | Playwright già pronti | da rifare | da rifare |
 
+## Confronto visivo
+
+Le due scene ora usano la stessa camera (1900, 1500, 2200 verso l'origine, FOV 60), la stessa direzione del sole (-0.55, 0.75, 0.38), ombre direzionali, ACES tonemapping e antialiasing (MSAA 4x in Godot, antialias WebGL in Three.js). Gli screenshot di confronto si ottengono con:
+
+```bash
+npm run spike:three                                                       # /tmp/moglia-three-glb.png
+godot --path spike/godot --resolution 1280x800 -- --shot                  # /tmp/moglia-godot.png
+godot --path spike/godot                                                  # finestra esplorabile
+```
+
+Differenze osservate a parità di GLB:
+
+- Godot è leggermente più luminoso e "morbido" (tonemap e antialiasing diversi); Three.js è più contrastato.
+- Le ombre sono più visibili in Three.js a questa distanza; in Godot il cielo procedurale schiarisce l'ambiente.
+- **La geometria è identica**: il GLB non ha texture né alberi, quindi questo confronto misura illuminazione e resa dei materiali piatti, non la grafica del gioco completo. Per un confronto artistico servirebbe portare in Godot anche texture, alberi, landmark e veicoli.
+
 ## Conclusione
 
 Per Moglia City **la mappa non giustifica un cambio di motore**: si carica ovunque in pochi millisecondi. Se il progetto resta un gioco web leggero e condivisibile, Three.js è la scelta giusta. Godot 4 ha senso solo se l'editor e i sistemi integrati valgono i 20–40 MB in più e la riscrittura del gameplay. Unity ha senso se il piano diventa multipiattaforma con contenuti e team.
