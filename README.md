@@ -20,6 +20,7 @@ Un mini open world 3D in terza persona, nel browser, ambientato nelle vie vere d
 - **Stunt jump e collezionabili**: cinque rampe in paese e 20 panini nascosti, molti dei quali nei negozi OSM reali.
 - **Telefono, trucchi, giorno/notte, obiettivi**: contatti utili, trucchi digitati, ciclo solare e dieci obiettivi.
 - **Interfaccia**: minimappa con il nome della via, mappa completa del paese con i nomi delle strade, nebbia della Bassa, controlli touch per telefono.
+- **Lingua**: interfaccia, messaggi, missioni e voci dei pedoni in dialetto della Bassa; i nomi dei luoghi vengono da OSM e restano nella forma originale, così come la nota di licenza.
 
 | Municipio | Mappa del paese |
 |---|---|

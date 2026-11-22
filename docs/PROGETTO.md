@@ -92,6 +92,24 @@ Quattro personaggi proposti all'avvio, con statistica diversa:
 
 **Limite dichiarato:** non c'è ancora il multiplayer reale. Per giocare in due serve un backend (WebSocket/server autoritativo) e quindi hosting: il gioco oggi è un file statico senza servizi esterni. La schermata si chiama "Moglia Online" perché riproduce la selezione personaggio in stile GTA Online. Il multiplayer è la prossima decisione aperta.
 
+## Lingua e dialetto
+
+Richiesta del 22/11/2026: "tutte le conversazioni e messaggi vanno in dialetto mogliese". Sono stati portati in dialetto della Bassa:
+
+- schermata iniziale, personaggi, comandi, missioni, trucchi e crediti;
+- HUD, suggerimenti contestuali, messaggi di missione e di ricompensa;
+- officina, telefono, obiettivi, statistiche e trucchi;
+- voci dei pedoni, dei clienti e dei conducenti (frasi di scherno, clacson, incidenti);
+- mappa completa, aiuti e testi di sistema.
+
+Restano in italiano o nella forma originale:
+
+- **nomi dei luoghi OSM** (Panificio Ada, Piazza Guglielmo Marconi, Via Giacomo Leopardi…): sono dati, non testo di gioco, e non vanno modificati;
+- **attribuzione e licenza ODbL**, per correttezza legale;
+- nomi propri di strade, piazze e attività.
+
+La grafia usata è una bozza di mantovano/basso mantovano (per esempio "Zöga", "el tò omin", "Sèra", "Te serve n'auto", "I è rivà la nebbia"). Prima di considerarla definitiva va rivista da un parlante di Moglia: le correzioni si fanno direttamente nelle stringhe di `src/main.js` e `src/index.template.html` (non c'è ancora un file di traduzioni separato).
+
 ## Fisica, incidenti e veicoli
 
 Intervento del 22/11/2026, richiesto da Federico ("vorrei migliorare la fisica, gli incidenti, le macchine etc"):
