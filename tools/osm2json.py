@@ -7,9 +7,21 @@ import xml.etree.ElementTree as ET
 
 src, dst = sys.argv[1], sys.argv[2]
 root = ET.parse(src).getroot()
+import os
 b = root.find('bounds')
-LAT0 = (float(b.get('minlat')) + float(b.get('maxlat'))) / 2
-LON0 = (float(b.get('minlon')) + float(b.get('maxlon'))) / 2
+if b is None:  # estratti Overpass per confine comunale: il riquadro si ricava dai nodi
+    lats = [float(n.get('lat')) for n in root.iter('node')]; lons = [float(n.get('lon')) for n in root.iter('node')]
+    b = {'minlat': min(lats), 'maxlat': max(lats), 'minlon': min(lons), 'maxlon': max(lons)}
+else:
+    b = {k: float(b.get(k)) for k in ('minlat', 'maxlat', 'minlon', 'maxlon')}
+# Origine fissa sul centro storico: le coordinate del gioco (edifici rifatti a mano, fontana,
+# monumento, officina) restano le stesse anche se l'estratto si allarga alle frazioni.
+# Per tornare al centro del riquadro: MOGLIA_ORIGIN=auto
+_o = os.environ.get('MOGLIA_ORIGIN', '44.933499999999995,10.9115')
+if _o == 'auto':
+    LAT0 = (b['minlat'] + b['maxlat']) / 2; LON0 = (b['minlon'] + b['maxlon']) / 2
+else:
+    LAT0, LON0 = (float(v) for v in _o.split(','))
 KX = math.cos(math.radians(LAT0)) * 111320.0
 KZ = 110574.0
 
@@ -164,9 +176,58 @@ for nid, t in node_tags:
         if t.get('name'): d['n'] = t['name']
         d['a'] = t.get('amenity') or ('shop:' + t['shop'] if t.get('shop') else (t.get('tourism') or t.get('natural') or t.get('highway')))
         pois.append(d)
+    elif t.get('place') in ('village', 'hamlet', 'suburb', 'quarter', 'neighbourhood', 'locality', 'isolated_dwelling', 'town') and t.get('name'):
+        # frazioni e località: nome grande visibile da lontano e sulla mappa
+        pois.append({'x': x, 'z': z, 'n': t['name'], 'a': 'place:' + t['place']})
+
+# Ritaglio: fiumi, canali e grandi aree (acqua, boschi) in OSM proseguono per decine di km.
+# Si tengono solo dentro il riquadro di strade ed edifici, più un margine.
+MARGIN = 300.0
+_xs = [v for r in roads for v in r['p'][0::2]] + [v for bd in buildings for v in bd['p'][0::2]]
+_zs = [v for r in roads for v in r['p'][1::2]] + [v for bd in buildings for v in bd['p'][1::2]]
+CX0, CX1, CZ0, CZ1 = min(_xs) - MARGIN, max(_xs) + MARGIN, min(_zs) - MARGIN, max(_zs) + MARGIN
+def _inside(x, z): return CX0 <= x <= CX1 and CZ0 <= z <= CZ1
+def clip_line(p):
+    out, cur = [], []
+    for i in range(0, len(p), 2):
+        if _inside(p[i], p[i + 1]): cur += [p[i], p[i + 1]]
+        else:
+            if len(cur) >= 4: out.append(cur)
+            cur = []
+    if len(cur) >= 4: out.append(cur)
+    return out
+def clip_poly(p):  # Sutherland-Hodgman sul rettangolo
+    pts = [(p[i], p[i + 1]) for i in range(0, len(p), 2)]
+    for axis, val, keep_ge in ((0, CX0, True), (0, CX1, False), (1, CZ0, True), (1, CZ1, False)):
+        if not pts: break
+        res = []
+        for i in range(len(pts)):
+            a, b = pts[i - 1], pts[i]
+            ina = (a[axis] >= val) if keep_ge else (a[axis] <= val)
+            inb = (b[axis] >= val) if keep_ge else (b[axis] <= val)
+            if inb:
+                if not ina: res.append(_cut(a, b, axis, val))
+                res.append(b)
+            elif ina: res.append(_cut(a, b, axis, val))
+        pts = res
+    return [round(v, 1) for q in pts for v in q] if len(pts) >= 3 else None
+def _cut(a, b, axis, val):
+    t = (val - a[axis]) / ((b[axis] - a[axis]) or 1e-9)
+    return (a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t)
+_lines = []
+for l in lines:
+    for seg in clip_line(l['p']): _lines.append({**l, 'p': seg})
+lines = _lines
+_areas = []
+for a in areas:
+    q = a['p'] if all(_inside(a['p'][i], a['p'][i + 1]) for i in range(0, len(a['p']), 2)) else clip_poly(a['p'])
+    if q: _areas.append({**a, 'p': q})
+areas = _areas
+pois = [d for d in pois if _inside(d['x'], d['z'])]
+b = {'minlon': LON0 + CX0 / KX, 'maxlon': LON0 + CX1 / KX, 'maxlat': LAT0 - CZ0 / KZ, 'minlat': LAT0 - CZ1 / KZ}
 
 out = {'gv': gv, 'lat0': LAT0, 'lon0': LON0, 'roads': roads, 'buildings': buildings, 'areas': areas, 'lines': lines, 'pois': pois,
-       'ext': [round((float(b.get('minlon')) - LON0) * KX), round(-(float(b.get('maxlat')) - LAT0) * KZ),
-               round((float(b.get('maxlon')) - LON0) * KX), round(-(float(b.get('minlat')) - LAT0) * KZ)]}
+       'ext': [round((b['minlon'] - LON0) * KX), round(-(b['maxlat'] - LAT0) * KZ),
+               round((b['maxlon'] - LON0) * KX), round(-(b['minlat'] - LAT0) * KZ)]}
 json.dump(out, open(dst, 'w'), separators=(',', ':'))
 print(len(roads), 'roads', len(buildings), 'buildings', len(areas), 'areas', len(lines), 'lines', len(pois), 'pois', out['ext'])

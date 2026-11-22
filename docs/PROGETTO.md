@@ -231,7 +231,7 @@ Al 22/11/2026:
 1. **Officina Gasparini su OSM**: mapparla su OpenStreetMap per uscire dal fallback.
 2. **Multiplayer reale**: serve un server; decidere se farlo (WebSocket + stanza) o restare single player con selezione personaggio.
 3. **Interazioni per negozi OSM**: collegare i POI OSM a funzioni di gioco (es. comprare un panino da Panificio Ada, gelato da K2).
-4. **Ampliamento mappa**: le officine OSM più vicine (Falcin, Fabbricese) sono fuori dal riquadro attuale; per includerle va allargato il bbox, con aumento di peso e tempi di build.
+4. **Ampliamento mappa**: fatto il 22/11/2026, la mappa copre tutto il comune (confine amministrativo, `tools/comune-moglia.overpassql`). L'origine delle coordinate resta fissa sul centro storico; fiumi e grandi aree sono ritagliati sul territorio più 300 m. Restano fuori circa 30 edifici dell'angolo sud-est del vecchio riquadro, che sono in un altro comune. Le officine Falcin e Fabbricese, se fuori dal confine, restano escluse.
 5. **Motore**: prova comparativa fatta con lo stesso GLB in Three.js e Godot 4 (Unity non misurato). Risultati in `docs/ENGINE-SPIKE.md`: la mappa si carica in pochi millisecondi ovunque, quindi il cambio motore si giustifica solo per editor e sistemi integrati, non per il caricamento. Decisione attuale: restare su Three.js finché il gioco è web e single-file.
 6. **Fisica vera**: se l'arcade attuale non basta, valutare Rapier (WASM) per rigid body, sospensioni e ribaltamenti. Costo: riscrittura della guida e dei pedoni, più ~1,5 MB di wasm.
 7. **Posizioni esatte dalle foto**: con gli originali (EXIF con GPS e direzione) si possono verificare i punti di ripresa e affinare monumento e fontana.

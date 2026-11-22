@@ -413,8 +413,10 @@ export function buildWorld(D, scene) {
   for (const b of W.blds) if (b.n) places.push({ name: b.n, x: b.cx, z: b.cz, h: b.h, a: b.a });
   for (const pt of D.pois) if (pt.n) places.push({ name: pt.n, x: pt.x, z: pt.z, h: 6, a: pt.a });
   for (const pl of places) {
-    const lab = makeLabel(pl.name, { size: 40, scale: 0.055 });
-    lab.position.set(pl.x, pl.h + 4, pl.z); scene.add(lab); pl.label = lab;
+    pl.frazione = typeof pl.a === 'string' && pl.a.startsWith('place:');
+    // frazioni e località: etichetta più grande e alta, visibile da lontano
+    const lab = pl.frazione ? makeLabel(pl.name, { size: 56, scale: 0.11, bg: 'rgba(122,40,16,0.82)' }) : makeLabel(pl.name, { size: 40, scale: 0.055 });
+    lab.position.set(pl.x, pl.frazione ? 34 : pl.h + 4, pl.z); scene.add(lab); pl.label = lab;
     pl.v = W.nearestDriveVert(pl.x, pl.z);
     pl.rx = D.gv[pl.v * 2]; pl.rz = D.gv[pl.v * 2 + 1];
   }

@@ -1332,7 +1332,9 @@ function drawBigMap() {
     c.save(); c.translate(X(l.x), Y(l.z)); c.rotate(l.a); c.lineWidth = 3; c.strokeStyle = 'rgba(255,255,255,0.9)'; c.strokeText(l.n, 0, 0); c.fillStyle = '#333'; c.fillText(l.n, 0, 0); c.restore();
   }
   c.font = '700 13px system-ui';
-  for (const pl of W.places) { c.beginPath(); c.arc(X(pl.x), Y(pl.z), 4, 0, 7); c.fillStyle = '#8e44ad'; c.fill(); c.lineWidth = 3; c.strokeStyle = '#fff'; c.strokeText(pl.name, X(pl.x), Y(pl.z) - 12); c.fillStyle = '#4a235a'; c.fillText(pl.name, X(pl.x), Y(pl.z) - 12); }
+  for (const pl of W.places) {
+    if (pl.frazione) { c.save(); c.font = '800 22px system-ui'; c.lineWidth = 5; c.strokeStyle = '#fff'; c.strokeText(pl.name.toUpperCase(), X(pl.x), Y(pl.z)); c.fillStyle = '#7a2810'; c.fillText(pl.name.toUpperCase(), X(pl.x), Y(pl.z)); c.restore(); continue; }
+    c.beginPath(); c.arc(X(pl.x), Y(pl.z), 4, 0, 7); c.fillStyle = '#8e44ad'; c.fill(); c.lineWidth = 3; c.strokeStyle = '#fff'; c.strokeText(pl.name, X(pl.x), Y(pl.z) - 12); c.fillStyle = '#4a235a'; c.fillText(pl.name, X(pl.x), Y(pl.z) - 12); }
   if (!mission) for (const g of givers) { c.beginPath(); c.arc(X(g.x), Y(g.z), 9, 0, 7); c.fillStyle = g.color; c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 3; c.stroke(); c.fillStyle = '#111'; c.strokeText(g.title, X(g.x), Y(g.z) + 20); c.fillText(g.title, X(g.x), Y(g.z) + 20); }
   for (const p of panini) if (!p.got) { c.beginPath(); c.arc(X(p.x), Y(p.z), 3, 0, 7); c.fillStyle = '#e8b64c'; c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.stroke(); }
   for (const st of stunts) { c.beginPath(); c.arc(X(st.x), Y(st.z), 5, 0, 7); c.fillStyle = '#f2c200'; c.fill(); c.strokeStyle = '#333'; c.lineWidth = 1.5; c.stroke(); }
@@ -1775,7 +1777,7 @@ function loop(time) {
   updateCamera(dt);
 
   // labels only when close
-  for (const pl of W.places) { const d = Math.hypot(pl.x - P.x, pl.z - P.z); pl.label.visible = d < 160; }
+  for (const pl of W.places) { const d = Math.hypot(pl.x - P.x, pl.z - P.z); pl.label.visible = pl.frazione ? d > 150 && d < 2500 : d < 160; }
   for (const g of givers) { g.beacon.children[0].material.opacity = 0.25 + Math.sin(now * 3) * 0.08; }
   targetBeacon.children[0].material.opacity = 0.28 + Math.sin(now * 4) * 0.1;
   if (mission) {
