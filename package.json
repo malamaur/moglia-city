@@ -9,6 +9,9 @@
     "build": "node build.mjs",
     "data": "python3 tools/osm2json.py data/moglia.osm data/moglia.json",
     "fetch-osm": "sh tools/fetch-osm.sh",
+    "glb": "node tools/export-glb.mjs",
+    "spike:three": "node tools/measure-three.mjs",
+    "spike:godot": "node tools/measure-godot.mjs",
     "test": "node tests/smoke.mjs"
   },
   "keywords": ["threejs", "game", "openstreetmap", "moglia", "mantova", "webgl"],

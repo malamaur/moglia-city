@@ -156,3 +156,4 @@ Al 22/11/2026:
 2. **Multiplayer reale**: serve un server; decidere se farlo (WebSocket + stanza) o restare single player con selezione personaggio.
 3. **Interazioni per negozi OSM**: collegare i POI OSM a funzioni di gioco (es. comprare un panino da Panificio Ada, gelato da K2).
 4. **Ampliamento mappa**: le officine OSM più vicine (Falcin, Fabbricese) sono fuori dal riquadro attuale; per includerle va allargato il bbox, con aumento di peso e tempi di build.
+5. **Motore**: prova comparativa fatta con lo stesso GLB in Three.js e Godot 4 (Unity non misurato). Risultati in `docs/ENGINE-SPIKE.md`: la mappa si carica in pochi millisecondi ovunque, quindi il cambio motore si giustifica solo per editor e sistemi integrati, non per il caricamento. Decisione attuale: restare su Three.js finché il gioco è web e single-file.

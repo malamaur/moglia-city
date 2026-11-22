@@ -62,6 +62,18 @@ npm test         # test di fumo nel browser (la prima volta: npx playwright inst
 
 `dist/index.html` contiene il gioco, Three.js e la mappa: si può aprire con un doppio clic o caricare su qualunque hosting statico.
 
+### Prova motori (Three.js / Godot 4 / Unity WebGL)
+
+La stessa città OSM può essere esportata e caricata in motori diversi per confrontare i tempi:
+
+```bash
+npm run glb          # data/moglia.json -> spike/moglia.glb (4,7 MB, 67.528 triangoli)
+npm run spike:three  # misura il caricamento in Three.js (Chromium headless)
+npm run spike:godot  # misura il caricamento in Godot 4 (serve Godot installato)
+```
+
+Risultati e limiti della prova in [docs/ENGINE-SPIKE.md](docs/ENGINE-SPIKE.md). Per Unity ci sono solo istruzioni e script in [spike/unity/README.md](spike/unity/README.md): il motore non è installato e non è stato misurato.
+
 ### Aggiornare o allargare la mappa
 
 ```bash

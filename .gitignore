@@ -6,3 +6,8 @@ data/*.osm
 .DS_Store
 npm-debug.log*
 .claude/settings.local.json
+spike/moglia.glb
+spike/three-loader/bundle.js
+spike/godot/.godot/
+spike/godot/moglia.glb
+spike/godot/moglia.glb.import
