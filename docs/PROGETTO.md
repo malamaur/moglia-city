@@ -96,11 +96,16 @@ Quattro personaggi proposti all'avvio, con statistica diversa:
 
 Richiesta del 22/11/2026: "tutte le conversazioni e messaggi vanno in dialetto mogliese". Il 22/11 è stato aggiunto anche: "estrapola tutto il testo dentro un file json localizzato".
 
-**Tutti i testi di gioco stanno in `src/lang/mogliese.json`.** Non ci sono più stringhe utente sparse nel codice.
+**Tutti i testi di gioco stanno in `src/lang/`**, senza stringhe utente sparse nel codice:
 
-- `src/main.js` importa il JSON, espone `t('gruppo.chiave', { var })` e sostituisce i segnaposto `{var}`. Le parti statiche di `src/index.template.html` hanno attributi `data-i18n="gruppo.chiave"` e vengono riempite da `applyI18n()` all'avvio.
-- Il JSON contiene: caricamento, schermata iniziale, comandi, personaggi, missioni, obiettivi, HUD, mappa, officina, telefono, trucchi, particelle/incidenti, voci dei pedoni, veicoli, meteo, audio.
-- Per aggiungere una lingua: si copia `mogliese.json` (per esempio in `it.json`), si traducono i valori lasciando le chiavi, e si cambia l'import in `src/main.js`. La struttura è già pronta per un selettore di lingua.
+- `it.json` è la **lingua predefinita**.
+- `mogliese.json` è una **bozza dialettale non verificata**, attivabile con `?lang=mogliese` (la scelta viene ricordata in `localStorage`). Il 22/11 Federico ha segnalato che non corrisponde al dialetto parlato a Moglia: va corretta con un parlante locale prima di usarla come default.
+
+Il 22/11/2026 Federico ha anche chiesto di rispondere in italiano in chat: la chat non va più in dialetto.
+
+- `src/main.js` importa i due JSON, espone `t('gruppo.chiave', { var })` e sostituisce i segnaposto `{var}`. Le parti statiche di `src/index.template.html` hanno attributi `data-i18n="gruppo.chiave"` e vengono riempite da `applyI18n()` all'avvio. `window.__game.lang` indica la lingua attiva e `window.__game.setLang('it'|'mogliese')` la cambia.
+- I JSON contengono: caricamento, schermata iniziale, comandi, personaggi, missioni, obiettivi, HUD, mappa, officina, telefono, trucchi, particelle/incidenti, voci dei pedoni, veicoli, meteo, audio.
+- Per aggiungere una lingua: si copia `it.json`, si traducono i valori lasciando le chiavi, si importa in `src/main.js` e si aggiunge alla scelta in `pickLang()`.
 - I **nomi dei luoghi OSM** (Panificio Ada, Piazza Guglielmo Marconi, Via Giacomo Leopardi…), i nomi propri di strade/piazze/attività, le stazioni radio e la nota di licenza ODbL restano nella forma originale: sono dati o obblighi di attribuzione, non testo traducibile.
 
 ### Base linguistica
@@ -111,7 +116,24 @@ Moglia non ha un vocabolario dedicato online: parla il **dialetto basso mantovan
 - Wikimapia, "Comune di Moglia": il nome locale di Moglia è **La Mòja**.
 - Marco Moretti, *Al Paradis*, poesie nel dialetto dell'area Suzzara–Pegognaga–Gonzaga–Moglia–San Benedetto Po (indicato nella scheda Academia.edu).
 
-La grafia in `mogliese.json` è una **bozza di basso mantovano** ("La Mòja", "Zöga", "sèrn", "sàra", "Te sèrve n'auto", "L'è rivà la nebbia", "mutór"). Non esiste una grammatica normativa del mogliese e la fonetica varia molto anche tra paesi vicini: le correzioni di un parlante di Moglia vanno fatte direttamente nei valori di `src/lang/mogliese.json`, senza toccare le chiavi.
+La grafia in `mogliese.json` è una **bozza di basso mantovano** ("La Mòja", "Zöga", "sèrn", "sàra", "Te sèrve n'auto", "L'è rivà la nebbia", "mutór"). Non esiste una grammatica normativa del mogliese e la fonetica varia molto anche tra paesi vicini. **Federico ha confermato che non è il parlato di Moglia.** Per questo:
+
+- la lingua predefinita è l'italiano (`it.json`);
+- la bozza dialettale resta separata e si attiva solo con `?lang=mogliese`;
+- le correzioni vanno fatte nei valori di `src/lang/mogliese.json`, senza toccare le chiavi, idealmente con un parlante di Moglia o con un testo scritto in dialetto locale (poesie, racconti, trascrizioni).
+
+## Mobile
+
+Il 22/11/2026 Federico ha segnalato che da telefono il gioco non si avviava. Causa: la schermata iniziale, cresciuta con la scelta dell'omino, superava l'altezza del viewport e il body bloccato impediva di raggiungere il pulsante "Gioca".
+
+Correzioni:
+
+- `#intro` è ora scorrevole (`overflow-y:auto`, `touch-action:pan-y`, `overscroll-behavior:contain`) con la card centrata quando c'è spazio e scrollabile quando non c'è.
+- su dispositivi touch la lista dei comandi da tastiera è nascosta (`body.touch .keys{display:none}`), così la schermata resta corta.
+- fallback del renderer: se WebGL con `logarithmicDepthBuffer` non parte, si riprova senza; se WebGL manca del tutto compare un messaggio in `#loadmsg`.
+- fallback per `CanvasRenderingContext2D.roundRect` (Safari precedenti), usato dalle etichette.
+
+Verifica con Playwright su iPhone SE e iPhone 13 emulati: la schermata scorre, "Gioca" è cliccabile, l'HUD parte e il joystick touch sposta il personaggio (1,74 m in 1,5 s nel test). Nessun errore JavaScript.
 
 ## Fisica, incidenti e veicoli
 

@@ -1,0 +1,197 @@
+{
+  "locale": "it",
+  "label": "Italiano",
+  "note": "Lingua predefinita del gioco. Il dialetto locale è una bozza separata in mogliese.json.",
+  "text": {
+    "meta": {
+      "title": "Moglia City – mini open world nella Bassa mantovana"
+    },
+    "loading": {
+      "map": "Carico la mappa…",
+      "world": "Costruisco le vie di Moglia…"
+    },
+    "intro": {
+      "sub": "Un mini open world nelle vie vere di Moglia (MN)",
+      "online": "Moglia Online · scegli il tuo omino",
+      "controls": {
+        "walk": "cammina · guida (anche frecce)",
+        "mouse": "guarda intorno (clic per bloccare il cursore)",
+        "run": "corri",
+        "vehicle": "sali / scendi da un veicolo",
+        "jump": "salta · freno a mano",
+        "horn": "clacson · rimetti l'auto in strada",
+        "map": "mappa del paese · cambia telecamera",
+        "radio": "cambia stazione radio · telefono",
+        "time": "avanza l'ora · nebbia della Bassa · audio"
+      },
+      "missions": {
+        "pane": "consegne del pane a tempo",
+        "taxi": "accompagna i clienti",
+        "giro": "gara a tappe",
+        "police": "combina guai e scappa alle stelle",
+        "garage": "vernice e motore per la tua auto",
+        "panini": "20 panini nascosti in paese e 5 stunt jump"
+      },
+      "cheats": "Trucchi: digita",
+      "play": "Gioca",
+      "welcome": "Benvenuto a Moglia, {name}! Hai un'auto davanti: premi E per salire.",
+      "credit": "Strade, edifici e luoghi: © OpenStreetMap contributors, licenza ODbL. Facciate e altezze generate dove mancano i dati."
+    },
+    "hud": {
+      "help": "E sali/scendi · Q radio · K telefono · M mappa · N nebbia · C telecamera",
+      "hintEnterCar": "Premi E per salire",
+      "hintEnterCarTouch": "Premi 🚗 per salire",
+      "hintExitCar": "E per scendere · H clacson · Q radio",
+      "hintGarage": "E per entrare in officina",
+      "missionReward": "{dist} m · ricompensa {reward} €"
+    },
+    "characters": {
+      "luca": { "tag": "Il veloce", "desc": "Corre più di tutti" },
+      "ada": { "tag": "La fornaia", "desc": "Salute da vendemmia" },
+      "gigi": { "tag": "Il meccanico", "desc": "Officina con sconto" },
+      "sara": { "tag": "La turista", "desc": "+200 € in tasca" }
+    },
+    "vehicles": {
+      "utilitaria": "Utilitaria",
+      "berlina": "Berlina",
+      "sportiva": "Sportiva",
+      "furgone": "Furgone",
+      "camion": "Camion",
+      "autobus": "Autobus",
+      "apecar": "Motocarro",
+      "trattore": "Trattore",
+      "vigili": "Auto della Polizia Locale",
+      "generic": "Veicolo"
+    },
+    "missions": {
+      "busy": "Hai già una missione in corso",
+      "timeUp": "⏱️ Tempo scaduto! Missione fallita.",
+      "completed": "✅ {title} completata! +{reward} € (bonus tempo {bonus} €)",
+      "pane": {
+        "title": "Consegna del pane",
+        "loaded": "🥖 Pane caricato! Portalo a {dest}",
+        "step": "Porta il pane caldo a: {dest}"
+      },
+      "taxi": {
+        "title": "Taxi di Moglia",
+        "waiting": "🚕 Un cliente ti aspetta! Serve un'auto.",
+        "pickup": "Vai a prendere il cliente",
+        "drop": "Porta il cliente a: {dest}",
+        "needCar": "Ti serve un'auto per il cliente!",
+        "stopPickup": "Fermati per far salire il cliente",
+        "stopDrop": "Fermati per far scendere il cliente",
+        "greeting": "Buongiorno! Andiamo?"
+      },
+      "giro": {
+        "title": "Giro di Moglia",
+        "start": "🏁 Via! Passa da tutte le tappe prima che scada il tempo.",
+        "step": "Tappa {n}/{total}: {name}"
+      }
+    },
+    "wanted": {
+      "up": "🚨 Ricercato: {stars}",
+      "cleared": "✅ Ricercato azzerato",
+      "escaped": "🕶️ Li hai seminati! Ricercato azzerato",
+      "busted": "🚔 Arrestato dalla Polizia Locale. Multa: {fine} €"
+    },
+    "health": {
+      "ko": "💀 Sei svenuto. Ti sei risvegliato in Piazza Matteotti (−{loss} €)"
+    },
+    "achievements": {
+      "unlocked": "🏆 Obiettivo sbloccato: {name}",
+      "first": { "name": "Prima consegna", "desc": "Completa una missione" },
+      "pro": { "name": "Tuttofare", "desc": "Completa 5 missioni" },
+      "panini10": { "name": "Paninaro", "desc": "Trova 10 panini" },
+      "panini20": { "name": "Fame di Moglia", "desc": "Trova tutti i 20 panini" },
+      "stunt1": { "name": "Acrobata", "desc": "Fai uno stunt jump" },
+      "stunt3": { "name": "Cascatore", "desc": "Fai 3 stunt jump diversi" },
+      "wanted3": { "name": "Ricercato", "desc": "Arriva a 3 stelle di ricercatezza" },
+      "escape": { "name": "Fantasma", "desc": "Semina la Polizia Locale" },
+      "km5": { "name": "Turistico", "desc": "Percorri 5 km in auto" },
+      "tune3": { "name": "Elaborato", "desc": "Porta un motore al livello 3" }
+    },
+    "garage": {
+      "info": "{vehicle} · motore {tune}/3 · {money} € in tasca · {source}",
+      "sourceOsm": "posizione da OpenStreetMap",
+      "sourceProject": "posizione dal progetto (non ancora su OSM)",
+      "tuneButton": "Potenzia motore — {cost} €",
+      "repairButton": "Ripara auto — {cost} €",
+      "paintPoor": "Ti servono {cost} € per la vernice",
+      "paintDone": "🎨 Vernice nuova! −{cost} €",
+      "tuneMax": "Motore già al massimo",
+      "tunePoor": "Ti servono {cost} € per il motore",
+      "tuneDone": "🔧 Motore livello {level} (−{cost} €)",
+      "repairPoor": "Ti servono {cost} €",
+      "repairDone": "🧰 Auto rimessa a nuovo (−{cost} €)",
+      "close": "Chiudi (E)"
+    },
+    "phone": {
+      "title": "📱 Telefono",
+      "close": "Chiudi (K)",
+      "contacts": {
+        "taxi": "Chiama un cliente da caricare",
+        "pane": "Nuova consegna del pane",
+        "giro": "Gara a tappe per il paese",
+        "police": "Paga la multa e azzera il ricercato",
+        "meteo": "Nebbia sì o nebbia no"
+      },
+      "stats": "🚗 {km} km · 🏁 {missions} missioni · 🥪 {panini}/{total} · 🤸 {stunts} stunt\n💰 {earned} € guadagnati · 🚨 {crimes} reati · 🚔 {busted} arresti",
+      "bribeNone": "Nessuna ricerca in corso",
+      "bribePoor": "Ti servono {cost} € per la multa",
+      "bribeDone": "🚔 Multa pagata alla Polizia Locale: −{cost} €"
+    },
+    "cheats": {
+      "activated": "🎮 Trucco attivato: {msg}",
+      "money": "+500 €",
+      "health": "salute e armatura al massimo",
+      "police": "Polizia Locale distratta",
+      "motor": "motore elaborato",
+      "morning": "mattino",
+      "night": "notte fonda",
+      "needCar": "Serve un'auto"
+    },
+    "peds": {
+      "dodge": ["Ohé!", "Ma sei matto?!", "Piano!", "Occhio!", "Va' pian!", "Eh là!"],
+      "hit": ["Ma va' là!", "Ahia!", "Te ghe l'patente?", "Ma dai!"],
+      "car": ["Ehi! La mia macchina!", "Ladro! Torna qui!", "Ma cosa fai?!"],
+      "honk": ["Dai, muoviti!", "Allora?!", "Sveglia!"],
+      "driverLost": "La mia macchina!"
+    },
+    "fx": {
+      "stunt": "🤸 Stunt jump! +{reward} €",
+      "panino": "🥪 Panino{source} {count}/{total} · +25 €",
+      "paninoSource": " da {src}",
+      "health": "❤️ Salute ripristinata",
+      "armor": "🛡️ Armatura ripristinata",
+      "wrecked": "💥 Auto distrutta!"
+    },
+    "hints": {
+      "slowExit": "Rallenta prima di scendere!",
+      "noVehicle": "Nessun veicolo vicino",
+      "policeStolen": "🚓 Hai preso l'auto dei Vigili… non è una bella idea!",
+      "pedestrians": "Attento ai pedoni!",
+      "missionBusy": "Hai già una missione in corso"
+    },
+    "radio": {
+      "onlyInCar": "La radio si sente solo in auto"
+    },
+    "fog": {
+      "on": "🌫️ È arrivata la nebbia della Bassa…",
+      "off": "☀️ La nebbia si è alzata"
+    },
+    "audio": {
+      "off": "🔇 Audio disattivato",
+      "on": "🔊 Audio attivo"
+    },
+    "time": {
+      "jump": "🕘 Ore {hour}:00"
+    },
+    "map": {
+      "footer": "Moglia (MN) · rotella/+/- zoom · trascina per spostare · M per chiudere",
+      "credit": "Dati © OpenStreetMap contributors (ODbL)"
+    },
+    "vehicle": {
+      "reset": "🔧 Auto rimessa in strada"
+    }
+  }
+}

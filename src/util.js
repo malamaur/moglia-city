@@ -112,7 +112,10 @@ export function makeLabel(text, opts = {}) {
   const w = Math.ceil(ctx.measureText(text).width) + 40; c.width = w; c.height = fs + 30;
   ctx.font = `700 ${fs}px system-ui, sans-serif`;
   ctx.fillStyle = opts.bg || 'rgba(20,24,30,0.78)';
-  const r = 14; ctx.beginPath(); ctx.roundRect(0, 0, w, c.height, r); ctx.fill();
+  const r = 14; ctx.beginPath();
+  if (typeof ctx.roundRect === 'function') ctx.roundRect(0, 0, w, c.height, r);
+  else { ctx.moveTo(r, 0); ctx.arcTo(w, 0, w, c.height, r); ctx.arcTo(w, c.height, 0, c.height, r); ctx.arcTo(0, c.height, 0, 0, r); ctx.arcTo(0, 0, w, 0, r); }
+  ctx.fill();
   ctx.fillStyle = opts.color || '#fff'; ctx.textBaseline = 'middle'; ctx.fillText(text, 20, c.height / 2 + 2);
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   const m = new THREE.SpriteMaterial({ map: t, depthTest: opts.depthTest ?? true, transparent: true });

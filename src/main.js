@@ -3,9 +3,21 @@ import { buildWorld } from './world.js';
 import { makeVehicle, makePerson, animatePerson, speechBubble, CAR_COLORS } from './entities.js';
 import { rng, canvasTex, makeLabel } from './util.js';
 import { prepareLandmarks, buildLandmarks, prepareMunicipio, buildMunicipio } from './landmarks.js';
-import L from './lang/mogliese.json';
+import LANG_IT from './lang/it.json';
+import LANG_MOG from './lang/mogliese.json';
 
-// Tutti i testi di gioco stanno in src/lang/mogliese.json. t('gruppo.chiave', { var }) risolve {var}.
+// Tutti i testi di gioco stanno in src/lang/*.json. t('gruppo.chiave', { var }) risolve {var}.
+// Lingua predefinita: italiano. La bozza in dialetto si attiva con ?lang=mogliese.
+function pickLang() {
+  try {
+    const q = new URLSearchParams(location.search).get('lang');
+    if (q === 'it' || q === 'mogliese') { try { localStorage.setItem('moglia_lang', q); } catch (_) {} return q; }
+    const saved = localStorage.getItem('moglia_lang');
+    if (saved === 'it' || saved === 'mogliese') return saved;
+  } catch (_) {}
+  return 'it';
+}
+const L = pickLang() === 'mogliese' ? LANG_MOG : LANG_IT;
 const T = L.text;
 function t(path, vars = {}) {
   let v = path.split('.').reduce((o, k) => (o == null ? undefined : o[k]), T);
@@ -25,7 +37,18 @@ const wrap = (a) => { while (a > Math.PI) a -= Math.PI * 2; while (a < -Math.PI)
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 
 // ---------------- renderer / scene ----------------
-const renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true, powerPreference: 'high-performance' });
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ antialias: true, logarithmicDepthBuffer: true, powerPreference: 'high-performance' });
+} catch (err) {
+  try {
+    renderer = new THREE.WebGLRenderer({ antialias: false });
+  } catch (_) {
+    const msg = document.getElementById('loadmsg');
+    if (msg) msg.textContent = 'WebGL non è disponibile su questo browser. Prova Chrome o Safari aggiornato.';
+    throw err;
+  }
+}
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFShadowMap;
@@ -1704,6 +1727,8 @@ $('play').addEventListener('click', () => {
 requestAnimationFrame(loop);
 window.__game = {
   P, W, vehicles, peds, get fps() { return fps; }, keys, startMission, givers, camera,
+  lang: L.locale,
+  setLang: (l) => { try { localStorage.setItem('moglia_lang', l); } catch (_) {} location.reload(); },
   setYaw: (y) => camYaw = y, setPitch: (p) => { camPitch = p; lastMouse = now + 100; }, toggleCar,
   stats, wanted, cops, panini, stunts, pickups, garage, ACHIEVEMENTS, STATIONS, CHARACTERS, selectCharacter,
   damage: damagePlayer, damageCar, repairCar, crime: setWanted, clearWanted, addMoney, tuneCar, paintCar, radioSwitch,

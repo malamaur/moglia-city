@@ -1,7 +1,7 @@
 {
   "locale": "basso-mantovano",
   "label": "Dialét Bàss Mantuàn (Moglia / La Mòja)",
-  "note": "Bozza basata sul basso mantovano (emiliano) parlato nell'Oltrepò mantovano, di cui Moglia fa parte. I nomi dei luoghi OpenStreetMap non si traducono.",
+  "note": "BOZZA NON VERIFICATA. Federico ha segnalato che non corrisponde al dialetto parlato a Moglia. Base: basso mantovano (emiliano) dell'Oltrepò. Da correggere con un parlante locale. Si attiva con ?lang=mogliese. I nomi dei luoghi OpenStreetMap non si traducono.",
   "text": {
     "meta": {
       "title": "Moglia City – mini open world in de la Bassa mantovana"
