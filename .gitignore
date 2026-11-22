@@ -5,3 +5,4 @@ data/*.osm
 !docs/*.png
 .DS_Store
 npm-debug.log*
+.claude/settings.local.json

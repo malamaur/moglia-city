@@ -19,9 +19,9 @@ export const CAR_COLORS = ['#c0392b', '#2e86c1', '#f4f6f7', '#1c2833', '#7f8c8d'
 
 export function makeVehicle(type, color) {
   const g = new THREE.Group(); const body = lam(color); const wheels = [];
-  let spec;
+  let spec, bodyMat = body;
   if (type === 'trattore') {
-    const green = lam(color || '#2e7d32');
+    const green = lam(color || '#2e7d32'); bodyMat = green;
     g.add(box(1.4, 1.0, 2.2, green, 0, 1.0, 0.6));
     g.add(box(1.5, 0.15, 1.5, lam('#222'), 0, 2.9, -0.7));
     for (const [x, z] of [[-0.7, -1.2], [0.7, -1.2], [-0.7, -0.2], [0.7, -0.2]]) { const p = box(0.06, 1.4, 0.06, lam('#222'), x, 2.2, z * 0.8 - 0.3); g.add(p); }
@@ -71,6 +71,7 @@ export function makeVehicle(type, color) {
   }
   g.traverse(o => { if (o.isMesh) o.castShadow = true; });
   g.userData.wheels = wheels;
+  g.userData.bodyMats = [bodyMat];
   return { mesh: g, spec, type };
 }
 

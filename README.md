@@ -11,6 +11,13 @@ Un mini open world 3D in terza persona, nel browser, ambientato nelle vie vere d
 - **Gameplay**: si cammina, si corre e si salta. Si sale su qualunque veicolo: utilitarie, berline, furgoni, motocarri, trattori e auto della Polizia Locale.
 - **Vita in paese**: traffico che segue il grafo stradale e pedoni sui marciapiedi, che si scansano e brontolano in dialetto.
 - **Missioni**: consegne del pane (Panificio Ada), taxi (Piazza Marconi), Giro di Moglia a tappe (Piazza della Libertà).
+- **Moglia Online**: si sceglie l'omino tra quattro personaggi con statistiche diverse (velocità, salute, sconti, soldi).
+- **Inseguimenti**: livello di ricercatezza a stelle, Polizia Locale che insegue, arresto e multa.
+- **Radio in auto**: tre stazioni musicali generate proceduralmente (Radio Bassa, Moglia FM, Riso Dance).
+- **Salute e armatura**: danni da incidente, kit di pronto soccorso, armatura dalle banche, KO e risveglio in piazza.
+- **Officina Gasparini**: vernice, elaborazione motore e riparazioni; i luoghi delle interazioni vengono da OpenStreetMap.
+- **Stunt jump e collezionabili**: cinque rampe in paese e 20 panini nascosti, molti dei quali nei negozi OSM reali.
+- **Telefono, trucchi, giorno/notte, obiettivi**: contatti utili, trucchi digitati, ciclo solare e dieci obiettivi.
 - **Interfaccia**: minimappa con il nome della via, mappa completa del paese con i nomi delle strade, nebbia della Bassa, controlli touch per telefono.
 
 | Municipio | Mappa del paese |
@@ -18,6 +25,8 @@ Un mini open world 3D in terza persona, nel browser, ambientato nelle vie vere d
 | ![Municipio](docs/municipio.png) | ![Mappa](docs/mappa.png) |
 
 ## Comandi
+
+All'avvio hai una berlina dorata davanti a te: premi `E` per salire e partire subito.
 
 | Tasto | Azione |
 |---|---|
@@ -28,10 +37,17 @@ Un mini open world 3D in terza persona, nel browser, ambientato nelle vie vere d
 | `E` | sali / scendi da un veicolo |
 | `H` | clacson |
 | `R` | rimetti l'auto in strada |
+| `Q` / `Z` | stazione radio successiva / precedente (in auto) |
+| `K` | telefono (taxi, fornaio, polizia, meteo, statistiche) |
+| `T` | avanza di due ore |
 | `M` | mappa del paese (rotella per lo zoom, trascina per spostarti) |
 | `C` | cambia distanza della telecamera |
 | `N` | nebbia |
 | `U` | audio on/off |
+
+Trucchi: digita `PANE`, `SALUTE`, `LIBERTA`, `TURBO`, `SOLE` o `NOTTE`.
+
+Le scelte di progetto, i luoghi OpenStreetMap usati e le cose ancora aperte (multiplayer reale, Officina Gasparini su OSM) sono in [docs/PROGETTO.md](docs/PROGETTO.md).
 
 ## Sviluppo
 
@@ -69,6 +85,7 @@ src/
 data/moglia.json        mappa in formato compatto (generata da tools/osm2json.py)
 tools/                  download e conversione dei dati OpenStreetMap
 tests/smoke.mjs         test automatico nel browser
+docs/PROGETTO.md        requisiti, luoghi OSM verificati, decisioni e cose aperte
 build.mjs               build e server di sviluppo (esbuild)
 ```
 

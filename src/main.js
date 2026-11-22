@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { buildWorld } from './world.js';
 import { makeVehicle, makePerson, animatePerson, speechBubble, CAR_COLORS } from './entities.js';
-import { rng } from './util.js';
+import { rng, canvasTex, makeLabel } from './util.js';
 import { prepareLandmarks, buildLandmarks, prepareMunicipio, buildMunicipio } from './landmarks.js';
 
 const D = JSON.parse(document.getElementById('moglia-data').textContent);
@@ -25,7 +25,7 @@ const hemi = new THREE.HemisphereLight('#dfeeff', '#6b6a4a', 1.1); scene.add(hem
 const sun = new THREE.DirectionalLight('#fff1d6', 2.0); sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048); const sc = sun.shadow.camera; sc.left = -110; sc.right = 110; sc.top = 110; sc.bottom = -110; sc.near = 10; sc.far = 600; sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.6;
 scene.add(sun, sun.target);
-const SUN_DIR = new THREE.Vector3(-0.55, 0.75, 0.38).normalize();
+const sunDir = new THREE.Vector3(-0.55, 0.75, 0.38).normalize();
 addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
 
 $('loadmsg').textContent = 'Costruisco le vie di Moglia…';
@@ -99,11 +99,12 @@ let muted = false;
 
 // ---------------- vehicles ----------------
 const vehicles = [];
+let starterCar = null, starterLabel = null;
 const TYPES = ['utilitaria', 'utilitaria', 'utilitaria', 'berlina', 'berlina', 'furgone', 'apecar', 'trattore', 'vigili'];
 function spawnVehicle(type, x, z, h) {
   const color = type === 'vigili' ? '#f4f6f7' : type === 'trattore' ? (R() < 0.5 ? '#2e7d32' : '#c0392b') : type === 'apecar' ? (R() < 0.5 ? '#2e86c1' : '#d4ac0d') : CAR_COLORS[Math.floor(R() * CAR_COLORS.length)];
   const vh = makeVehicle(type, color);
-  const car = { ...vh, x, z, h, vf: 0, vel: new THREE.Vector2(), steer: 0, ai: null, stun: 0, honkT: 0 };
+  const car = { ...vh, x, z, h, vf: 0, vel: new THREE.Vector2(), steer: 0, ai: null, stun: 0, honkT: 0, y: 0, vy: 0, air: 0, tune: 0, speed: 0, baseSpec: { ...vh.spec } };
   car.mesh.position.set(x, 0, z); car.mesh.rotation.y = h; scene.add(car.mesh);
   car.mesh.userData.wheels.forEach(w => w.rotation.order = 'YXZ');
   vehicles.push(car); return car;
@@ -190,8 +191,27 @@ const SHOUTS_CAR = ['Ehi! La mia macchina!', 'Ladro! Torna qui!', 'Ma cosa fai?!
 const SHOUTS_HONK = ['Dai, muoviti!', 'Allora?!', 'Sveglia!'];
 
 // ---------------- player ----------------
-const player = makePerson(R, { shirt: '#1f6fb2', pants: '#2b2f38', hair: '#3a2a1c', skin: '#e9bf9b', scale: 1.0 });
-scene.add(player);
+// Moglia Online: si sceglie l'"omino" prima di entrare in paese.
+const CHARACTERS = [
+  { id: 'luca', name: 'Luca', tag: 'Il veloce', desc: 'Corre più di tutti', shirt: '#1f6fb2', pants: '#2b2f38', hair: '#3a2a1c', skin: '#e9bf9b', speed: 1.15, maxHp: 100 },
+  { id: 'ada', name: 'Ada', tag: 'La fornaia', desc: 'Salute da vendemmia', shirt: '#c0392b', pants: '#5d6d7e', hair: '#2b1d14', skin: '#f1c7a5', speed: 1.0, maxHp: 140 },
+  { id: 'gigi', name: 'Gigi', tag: 'Il meccanico', desc: 'Officina con sconto', shirt: '#d35400', pants: '#1b2631', hair: '#a87a43', skin: '#e0ac85', speed: 1.0, maxHp: 110, discount: 0.8 },
+  { id: 'sara', name: 'Sara', tag: 'La turista', desc: '+200 € in tasca', shirt: '#34495e', pants: '#212f3c', hair: '#5a3b22', skin: '#f5d2b8', speed: 1.05, maxHp: 110, bonus: 200 },
+];
+let charIdx = 0, player;
+function spawnPlayerMesh() {
+  if (player) scene.remove(player);
+  const c = CHARACTERS[charIdx];
+  player = makePerson(R, { shirt: c.shirt, pants: c.pants, hair: c.hair, skin: c.skin, scale: 1.0 });
+  scene.add(player);
+  player.position.set(P.x, 0, P.z);
+}
+function selectCharacter(i) {
+  charIdx = clamp(i, 0, CHARACTERS.length - 1);
+  spawnPlayerMesh();
+  for (const el of document.querySelectorAll('.char')) el.classList.toggle('sel', +el.dataset.i === charIdx);
+  beep(700, 0.08, 'sine', 0.04);
+}
 const P = { x: 0, z: 0, y: 0, vy: 0, h: 0, car: null, speed: 0 };
 // spawn in Piazza Matteotti, next to the Municipio
 let spawnPlace = W.places.find(p => /Municipio/.test(p.name)) || { rx: 0, rz: 0 };
@@ -204,6 +224,7 @@ let spawnPlace = W.places.find(p => /Municipio/.test(p.name)) || { rx: 0, rz: 0 
 function unstick(pos, r) { for (let k = 0; k < 4; k++) W.collideCircle(pos, r); if (W.insideBuilding(pos.x, pos.z)) { const v = W.nearestDriveVert(pos.x, pos.z); pos.x = vx(v); pos.z = vz(v); } }
 if (MUN) { P.x = MUN.front[0]; P.z = MUN.front[1]; P.h = MUN.faceYaw; }
 unstick(P, 0.4);
+spawnPlayerMesh();
 
 // world population
 function populate() {
@@ -223,13 +244,22 @@ function populate() {
     const type = R() < 0.07 ? 'apecar' : R() < 0.12 ? 'furgone' : R() < 0.4 ? 'berlina' : 'utilitaria';
     spawnVehicle(type, x, z, Math.atan2(dx, dz) + (R() < 0.5 ? 0 : Math.PI)); parked++;
   }
-  // one car right next to the player to get going
+  // mezzo di trasporto subito davanti al giocatore, ben visibile
   {
-    const v = W.nearestDriveVert(P.x, P.z); const e = W.adj[v][0];
-    const off = 3.2; const [tx, tz] = e ? laneTarget(v, e.to, off) : [P.x + 3, P.z];
-    const car = spawnVehicle('utilitaria', tx, tz, e ? Math.atan2(vx(e.to) - vx(v), vz(e.to) - vz(v)) : 0);
-    car.mesh.children[0].material.color.set('#c0392b');
-    const pos = { x: car.x, z: car.z }; W.collideCircle(pos, 1.2); car.x = pos.x; car.z = pos.z;
+    const [fx, fz] = fwd(P.h);
+    let x = P.x + fx * 4.5, z = P.z + fz * 4.5;
+    if (W.insideBuilding(x, z)) {
+      const v = W.nearestDriveVert(P.x, P.z); const e = W.adj[v][0];
+      const off = 2.8; [x, z] = e ? laneTarget(v, e.to, off) : [P.x + 4, P.z];
+    }
+    const car = spawnVehicle('berlina', x, z, P.h + Math.PI);
+    for (const m of car.mesh.userData.bodyMats || []) m.color.set('#ffb020');
+    const pos = { x: car.x, z: car.z }; W.collideCircle(pos, 1.4); car.x = pos.x; car.z = pos.z;
+    car.mesh.position.set(car.x, 0, car.z);
+    starterCar = car;
+    starterLabel = makeLabel('🚗 E per salire', { size: 34, scale: 0.014, bg: 'rgba(20,24,30,.86)', color: '#fff', depthTest: false });
+    starterLabel.position.y = car.spec.height + 1.8;
+    car.mesh.add(starterLabel);
   }
   for (let i = 0; i < 38; i++) { const c = spawnVehicle(TYPES[Math.floor(R() * TYPES.length)], 0, 0, 0); placeTraffic(c, 25, 420); }
   for (let i = 0; i < 55; i++) { const p = spawnPed(); placePed(p, 8, 260); }
@@ -298,7 +328,7 @@ function startMission(g) {
   beep(660, 0.15); beep(880, 0.2);
 }
 function endMission(ok, msg) {
-  if (ok) { money += mission.reward; try { localStorage.setItem('moglia_money', money); } catch (_) {} beep(784, 0.15); setTimeout(() => beep(1046, 0.3), 140); }
+  if (ok) { addMoney(mission.reward); stats.missions++; beep(784, 0.15); setTimeout(() => beep(1046, 0.3), 140); }
   else beep(200, 0.5, 'sawtooth');
   toast(msg, 3500);
   if (passenger) { const p = passenger; passenger = null; p.waiting = false; if (P.car && p.inCar) { p.inCar = false; p.mesh.visible = true; const [fx, fz] = fwd(P.car.h); p.x = P.car.x + fz * 2; p.z = P.car.z - fx * 2; } placePed(p, 0, 1e9) || 0; p.x = p.x; }
@@ -337,6 +367,557 @@ function updateMission(dt) {
     }
     toast(mission.steps[mission.step].text, 2000);
   }
+}
+
+// =====================================================================
+//  FUNZIONI IN STILE GTA V
+// =====================================================================
+
+// ---- statistiche e obiettivi ----
+const stats = { km: 0, missions: 0, stunts: 0, panini: 0, crimes: 0, escapes: 0, busted: 0, earned: 0, tuned: 0 };
+function addMoney(n) { money += n; if (n > 0) stats.earned += n; try { localStorage.setItem('moglia_money', money); } catch (_) {} }
+const ACHIEVEMENTS = [
+  { id: 'first', name: 'Prima consegna', desc: 'Completa una missione', test: () => stats.missions >= 1 },
+  { id: 'pro', name: 'Tuttofare', desc: 'Completa 5 missioni', test: () => stats.missions >= 5 },
+  { id: 'panini10', name: 'Paninaro', desc: 'Trova 10 panini', test: () => stats.panini >= 10 },
+  { id: 'panini20', name: 'Fame di Moglia', desc: 'Trova tutti i 20 panini', test: () => stats.panini >= 20 },
+  { id: 'stunt1', name: 'Acrobata', desc: 'Fai uno stunt jump', test: () => stats.stunts >= 1 },
+  { id: 'stunt3', name: 'Cascatore', desc: 'Fai 3 stunt jump diversi', test: () => stats.stunts >= 3 },
+  { id: 'wanted3', name: 'Ricercato', desc: 'Arriva a 3 stelle di ricercatezza', test: () => wanted.level >= 3 },
+  { id: 'escape', name: 'Fantasma', desc: 'Semina la Polizia Locale', test: () => stats.escapes >= 1 },
+  { id: 'km5', name: 'Turistico', desc: 'Percorri 5 km in auto', test: () => stats.km >= 5 },
+  { id: 'tune3', name: 'Elaborato', desc: 'Porta un motore al livello 3', test: () => stats.tuned >= 3 },
+];
+function checkAchievements() {
+  for (const a of ACHIEVEMENTS) if (!a.got && a.test()) {
+    a.got = true; toast('🏆 Obiettivo sbloccato: ' + a.name, 3200);
+    beep(1046, 0.12); setTimeout(() => beep(1318, 0.22), 130);
+  }
+}
+
+// ---- salute e armatura ----
+let hp = 100, armor = 0, maxHp = 100;
+function damagePlayer(n) {
+  if (n <= 0) return;
+  if (armor > 0) { const a = Math.min(armor, n); armor -= a; n -= a; }
+  hp = Math.max(0, hp - n);
+  if (n > 2) { flash('rgba(200,30,30,.35)'); beep(120, 0.12, 'square', 0.08); }
+  if (hp <= 0) ko();
+}
+function ko() {
+  const loss = Math.min(money, 100); money -= loss;
+  if (P.car) { P.car.vf = 0; P.car.vel.set(0, 0); P.car = null; player.visible = true; }
+  hp = maxHp; armor = 0;
+  const f = MUN ? MUN.front : [P.x, P.z];
+  P.x = f[0]; P.z = f[1]; P.y = 0; P.vy = 0; unstick(P, 0.4);
+  clearWanted(true);
+  flash('rgba(0,0,0,.85)', '💀 Sei svenuto. Ti sei risvegliato in Piazza Matteotti (−' + loss + ' €)');
+  beep(160, 0.6, 'sawtooth', 0.15);
+  try { localStorage.setItem('moglia_money', money); } catch (_) {}
+}
+let flashT = 0;
+function flash(bg, msg) {
+  const el = $('flash'); if (!el) return;
+  el.style.background = bg; el.classList.add('on');
+  const m = $('flashmsg'); m.textContent = msg || ''; m.style.opacity = msg ? 1 : 0;
+  flashT = msg ? 2.4 : 0.18;
+}
+
+// ---- ricercato e Polizia Locale ----
+const wanted = { level: 0, cool: 0, bustT: 0 };
+const cops = [];
+let lastSiren = 0;
+function setWanted(n) {
+  if (n <= 0) return;
+  wanted.level = clamp(wanted.level + n, 0, 5);
+  wanted.cool = 14; stats.crimes++;
+  syncCops();
+  toast('🚨 Ricercato: ' + '★'.repeat(wanted.level), 1800);
+  beep(920, 0.12); beep(1150, 0.12);
+}
+function clearWanted(silent) {
+  const had = wanted.level > 0;
+  wanted.level = 0; wanted.cool = 0; wanted.bustT = 0;
+  for (const c of cops) c.gone = true;
+  cops.length = 0;
+  if (!silent && had) { toast('✅ Ricercato azzerato', 1600); beep(700, 0.1); }
+}
+function syncCops() {
+  for (let i = cops.length - 1; i >= 0; i--) if (cops[i].gone) cops.splice(i, 1);
+  const want = Math.min(4, wanted.level);
+  while (cops.length < want) {
+    let c = null;
+    for (let t = 0; t < 4 && !c; t++) c = spawnCop();
+    if (!c) break;
+    cops.push(c);
+  }
+  while (cops.length > want) cops.pop().gone = true;
+}
+function spawnCop() {
+  let best = -1, bd = 1e9;
+  for (let k = 0; k < 140; k++) {
+    const v = W.driveVerts[Math.floor(R() * W.driveVerts.length)];
+    const d = Math.hypot(vx(v) - P.x, vz(v) - P.z);
+    if (d < 70 || d > 240) continue;
+    const score = Math.abs(d - 130);
+    if (score < bd) { bd = score; best = v; }
+  }
+  if (best < 0) return null;
+  const e = W.adj[best][Math.floor(R() * W.adj[best].length)];
+  const x = vx(best), z = vz(best);
+  const car = spawnVehicle('vigili', x, z, e ? Math.atan2(vx(e.to) - x, vz(e.to) - z) : 0);
+  car.cop = true; car.ai = null; car.vf = 0; car.speed = 0;
+  return car;
+}
+function placeCopNear(car) {
+  const v = W.nearestDriveVert(P.x, P.z);
+  const e = W.adj[v] && W.adj[v][0];
+  if (!e) return;
+  const [tx, tz] = laneTarget(v, e.to, 3);
+  car.x = tx; car.z = tz; car.h = Math.atan2(vx(e.to) - vx(v), vz(e.to) - vz(v));
+  car.vf = 0; car.stun = 0; car.y = 0; car.vy = 0;
+}
+function updateCop(car, dt) {
+  const dx = P.x - car.x, dz = P.z - car.z, d = Math.hypot(dx, dz);
+  if (d > 340) { placeCopNear(car); return; }
+  const want = Math.atan2(dx, dz), dh = wrap(want - car.h);
+  const turn = (1.8 + Math.min(2.2, car.vf * 0.06)) * dt;
+  car.h += clamp(dh, -turn, turn);
+  let target = d < 7 ? 0 : Math.min(31, 10 + d * 0.09);
+  if (Math.abs(dh) > 1.2) target = Math.min(target, 7);
+  car.vf += clamp(target - car.vf, -18 * dt, 12 * dt);
+  advanceCarKinematic(car, dt);
+  if (car.y < 1) collideCar(car, false);
+  if (d < 6.5 && !P.car && car.vf < 5) {
+    wanted.bustT += dt;
+    if (wanted.bustT > 1.5) getBusted();
+  } else if (d > 9) wanted.bustT = Math.max(0, wanted.bustT - dt * 2);
+}
+function updateWanted(dt) {
+  if (wanted.level <= 0) { wanted.bustT = 0; return; }
+  if (now - lastSiren > 1.1) { lastSiren = now; beep(760 + (Math.floor(now * 2) % 2) * 240, 0.18, 'square', 0.03); }
+  wanted.topT = (wanted.topT || 0) - dt;
+  if (wanted.topT <= 0) {
+    wanted.topT = 2;
+    const want = Math.min(4, wanted.level);
+    let alive = 0; for (const c of cops) if (!c.gone) alive++;
+    if (alive < want) syncCops();
+  }
+  let near = false;
+  for (const c of cops) if (!c.gone && Math.hypot(c.x - P.x, c.z - P.z) < 55) near = true;
+  if (near) { wanted.cool = Math.max(wanted.cool, 6); return; }
+  wanted.cool -= dt;
+  if (wanted.cool > 0) return;
+  wanted.level--;
+  if (wanted.level <= 0) {
+    stats.escapes++;
+    for (const c of cops) c.gone = true;
+    cops.length = 0;
+    toast('🕶️ Li hai seminati! Ricercato azzerato', 2600);
+    beep(700, 0.15); setTimeout(() => beep(980, 0.2), 140);
+  } else {
+    wanted.cool = 14; syncCops();
+    toast('🚨 Ricercato: ' + '★'.repeat(wanted.level), 1500);
+  }
+}
+function getBusted() {
+  const fine = Math.min(money, 80 * Math.max(1, wanted.level));
+  money -= fine; stats.busted++;
+  if (P.car) { P.car.vf = 0; P.car.vel.set(0, 0); P.car = null; player.visible = true; }
+  clearWanted(true);
+  const f = MUN ? MUN.front : [P.x, P.z];
+  P.x = f[0]; P.z = f[1]; P.y = 0; P.vy = 0; unstick(P, 0.4);
+  flash('rgba(0,0,0,.82)', '🚔 Arrestato dalla Polizia Locale. Multa: ' + fine + ' €');
+  beep(180, 0.5, 'sawtooth', 0.15);
+  try { localStorage.setItem('moglia_money', money); } catch (_) {}
+}
+
+// ---- radio ----
+const STATIONS = [
+  { name: 'Radio Bassa', bpm: 108, kind: 'folk' },
+  { name: 'Moglia FM', bpm: 122, kind: 'pop' },
+  { name: 'Riso Dance', bpm: 128, kind: 'dance' },
+];
+let station = -1, radioNextT = 0, radioStep = 0, radioBus = null, noiseBuf = null;
+function ensureRadio() {
+  if (!AC || radioBus) return;
+  radioBus = AC.createGain(); radioBus.gain.value = 0; radioBus.connect(AC.destination);
+  noiseBuf = AC.createBuffer(1, Math.floor(AC.sampleRate * 0.4), AC.sampleRate);
+  const d = noiseBuf.getChannelData(0);
+  for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+}
+function rnote(midi, t, dur, type, vol, cutoff) {
+  const o = AC.createOscillator(), g = AC.createGain(), f = AC.createBiquadFilter();
+  o.type = type; o.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
+  f.type = 'lowpass'; f.frequency.value = cutoff || 1600;
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(f); f.connect(g); g.connect(radioBus); o.start(t); o.stop(t + dur + 0.02);
+}
+function rdrum(kind, t, vol) {
+  if (kind === 'kick') {
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+    g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.16);
+    o.connect(g); g.connect(radioBus); o.start(t); o.stop(t + 0.18); return;
+  }
+  const s = AC.createBufferSource(); s.buffer = noiseBuf;
+  const g = AC.createGain(), f = AC.createBiquadFilter();
+  f.type = kind === 'snare' ? 'bandpass' : 'highpass'; f.frequency.value = kind === 'snare' ? 1800 : 7000;
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + (kind === 'snare' ? 0.16 : 0.05));
+  s.connect(f); f.connect(g); g.connect(radioBus); s.start(t); s.stop(t + 0.2);
+}
+const BASS_PAT = [0, 7, 0, 7, 5, 0, 7, 3];
+function scheduleStep(kind, i, t) {
+  const bar = Math.floor(i / 16), b = i % 16;
+  const roots = kind === 'folk' ? [48, 53, 55, 48] : kind === 'dance' ? [45, 45, 48, 43] : [48, 45, 41, 43];
+  const root = roots[bar % roots.length];
+  if (b % 8 === 0) rdrum('kick', t, 0.32);
+  if (b % 8 === 4) rdrum('snare', t, 0.16);
+  if (b % 2 === 0) rdrum('hat', t, kind === 'dance' ? 0.05 : 0.035);
+  if (b % 4 === 0) rnote(root - 12, t, 0.24, kind === 'folk' ? 'triangle' : 'sawtooth', 0.09, 600);
+  if (kind === 'folk') {
+    if (b % 4 === 0) rnote(root + 12 + [0, 4, 7][bar % 3], t, 0.2, 'triangle', 0.045, 1100);
+    if (b === 6 || b === 14) rnote(root + 19, t, 0.15, 'triangle', 0.035, 1200);
+  } else {
+    if (b % 4 === 2) rnote(root + BASS_PAT[(bar + (b >> 2)) % 8], t, 0.16, 'square', 0.03, 900);
+    if (b % 4 === 0) rnote(root + [12, 16, 19, 14][(bar + b / 4) % 4], t, 0.3, kind === 'dance' ? 'sawtooth' : 'square', 0.032, 1300);
+    if (b === 10) rnote(root + 24, t, 0.2, 'triangle', 0.028, 1600);
+  }
+  if (kind === 'dance' && b % 4 === 1) rnote(root - 12, t, 0.12, 'sawtooth', 0.055, 500);
+}
+function radioTick() {
+  if (!AC) return;
+  ensureRadio(); if (!radioBus) return;
+  const inCar = !!P.car;
+  radioBus.gain.setTargetAtTime(inCar && station >= 0 && !muted ? 0.13 : 0, AC.currentTime, 0.08);
+  if (!inCar || station < 0 || muted) return;
+  const s = STATIONS[station], spb = 60 / s.bpm / 4;
+  if (radioNextT < AC.currentTime) radioNextT = AC.currentTime + 0.06;
+  let guard = 0;
+  while (radioNextT < AC.currentTime + 0.2 && guard++ < 40) {
+    try { scheduleStep(s.kind, radioStep, radioNextT); } catch (_) { /* la radio non deve mai fermare il gioco */ }
+    radioNextT += spb; radioStep = (radioStep + 1) % 64;
+  }
+}
+function radioSwitch(dir = 1) {
+  if (!P.car) { hint('La radio si sente solo in auto'); return; }
+  if (AC && AC.state === 'suspended') AC.resume();
+  station = (station + dir + STATIONS.length) % STATIONS.length;
+  radioNextT = (AC ? AC.currentTime : 0) + 0.05; radioStep = 0;
+  toast('📻 ' + STATIONS[station].name, 1600);
+  beep(660, 0.08, 'sine', 0.05); beep(880, 0.1, 'sine', 0.05);
+  const el = $('radio'); if (el) el.textContent = '📻 ' + STATIONS[station].name;
+}
+
+// ---- ciclo giorno/notte ----
+let tod = 9.5, clockT = 0;
+const DAY_SECONDS = 720;
+const skyNow = new THREE.Color('#a9cbe6');
+const SKY_KEYS = [[0, '#0b1424'], [5, '#182338'], [6.6, '#e89a63'], [8, '#a9cbe6'], [16.5, '#a9cbe6'], [18.4, '#e88a55'], [19.6, '#222c44'], [24, '#0b1424']].map(([h, c]) => [h, new THREE.Color(c)]);
+function skyAt(t) {
+  for (let i = 0; i < SKY_KEYS.length - 1; i++) {
+    const [h0, c0] = SKY_KEYS[i], [h1, c1] = SKY_KEYS[i + 1];
+    if (t >= h0 && t <= h1) return skyNow.copy(c0).lerp(c1, (t - h0) / (h1 - h0));
+  }
+  return skyNow.set('#0b1424');
+}
+function updateDayNight(dt) {
+  tod = (tod + dt * 24 / DAY_SECONDS) % 24;
+  const a = (tod - 6) / 12 * Math.PI, alt = Math.sin(a);
+  sunDir.set(Math.cos(a) * 0.8, Math.max(0.12, alt), 0.45).normalize();
+  const day = clamp(alt, 0, 1);
+  sun.intensity = 0.06 + day * 1.95;
+  sun.color.setHSL(0.11, 0.32 + (1 - day) * 0.3, 0.55 + day * 0.35);
+  hemi.intensity = 0.25 + day * 0.85;
+  if (foggy) { sun.intensity *= 0.35; hemi.intensity = Math.max(hemi.intensity, 1.35); }
+  skyAt(tod);
+  if (now - clockT > 0.25) {
+    clockT = now;
+    const hh = Math.floor(tod), mm = Math.floor((tod % 1) * 60);
+    const el = $('clock');
+    if (el) el.textContent = (tod < 6 || tod > 20 ? '🌙 ' : '☀️ ') + String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+  }
+}
+
+// ---- officina ----
+// posizione e nome dell'officina: dai dati OpenStreetMap se presenti,
+// altrimenti dal punto indicato dal progetto (vedi docs/PROGETTO.md).
+function findOsmPlace(re) {
+  for (const p of D.pois) if (p.n && re.test(p.n)) return { n: p.n, x: p.x, z: p.z, a: p.a };
+  for (const b of W.blds) if (b.n && re.test(b.n)) return { n: b.n, x: b.cx, z: b.cz, a: 'building' };
+  return null;
+}
+const GARAGE_OSM = findOsmPlace(/officina|gasparini|meccanico|autoriparazion|car\s?repair|garage/i);
+const garageBase = GARAGE_OSM || (() => {
+  const mz = D.roads.find(r => r.n === 'Piazza Guglielmo Marconi');
+  return { n: 'Officina Gasparini', x: mz ? mz.p[0] : P.x, z: mz ? mz.p[1] : P.z };
+})();
+const garage = (() => {
+  const v = W.nearestDriveVert(garageBase.x, garageBase.z);
+  const p = { x: vx(v), z: vz(v) };
+  W.collideCircle(p, 1.2);
+  return { x: p.x, z: p.z, name: garageBase.n, osm: !!GARAGE_OSM };
+})();
+{
+  const b = makeBeacon('#2ec4b6', 14, 1.8); b.position.set(garage.x, 0, garage.z);
+  const lab = speechBubble('🔧 ' + garage.name); lab.position.y = 5.4; lab.scale.multiplyScalar(0.4); b.add(lab);
+  const pad = new THREE.Mesh(new THREE.CylinderGeometry(5.5, 5.5, 0.08, 24), new THREE.MeshBasicMaterial({ color: '#2ec4b6', transparent: true, opacity: 0.18, depthWrite: false }));
+  pad.position.set(garage.x, 0.11, garage.z); scene.add(pad);
+}
+let garageOpen = false;
+function nearGarage() { return !!P.car && Math.hypot(P.car.x - garage.x, P.car.z - garage.z) < 8; }
+function openGarage() {
+  if (!P.car) return;
+  garageOpen = true; $('garage').style.display = 'block';
+  if (document.exitPointerLock) document.exitPointerLock();
+  updateGarageUI();
+}
+function closeGarage() { garageOpen = false; $('garage').style.display = 'none'; }
+function paintCar(car, hex) { if (car && car.mesh) for (const m of car.mesh.userData.bodyMats || []) m.color.set(hex); }
+function tuneCar(car, lvl) {
+  if (!car) return;
+  car.tune = clamp(lvl, 0, 3);
+  const b = car.baseSpec;
+  car.spec = { ...b, maxV: b.maxV * (1 + 0.14 * car.tune), acc: b.acc * (1 + 0.14 * car.tune) };
+  stats.tuned = Math.max(stats.tuned, car.tune);
+}
+const mechMul = () => CHARACTERS[charIdx].discount || 1;
+const paintCost = () => Math.round(50 * mechMul());
+const tuneCost = () => Math.round(150 * mechMul());
+const repairCost = () => Math.round(30 * mechMul());
+function updateGarageUI() {
+  if (!P.car) return;
+  const names = { utilitaria: 'Utilitaria', berlina: 'Berlina', furgone: 'Furgone', apecar: 'Motocarro', trattore: 'Trattore', vigili: 'Auto della Polizia Locale' };
+  const el = $('garageInfo');
+  if (el) el.textContent = (names[P.car.type] || 'Veicolo') + ' · motore ' + P.car.tune + '/3 · ' + money.toLocaleString('it-IT') + ' € in tasca · ' + (garage.osm ? 'posizione da OpenStreetMap' : 'posizione dal progetto (non ancora su OSM)');
+  const title = $('garageTitle'); if (title) title.textContent = '🔧 ' + garage.name;
+  const gT = $('gTune'), gR = $('gRepair');
+  if (gT) gT.textContent = 'Potenzia motore — ' + tuneCost() + ' €';
+  if (gR) gR.textContent = 'Ripara auto — ' + repairCost() + ' €';
+}
+function buyPaint(hex) {
+  if (!P.car) return;
+  const cost = paintCost();
+  if (money < cost) { hint('Ti servono ' + cost + ' € per la vernice'); return; }
+  money -= cost; paintCar(P.car, hex); updateGarageUI(); beep(540, 0.1);
+  toast('🎨 Vernice nuova! −' + cost + ' €', 1400);
+}
+function buyTune() {
+  if (!P.car) return;
+  if (P.car.tune >= 3) { hint('Motore già al massimo'); return; }
+  const cost = tuneCost();
+  if (money < cost) { hint('Ti servono ' + cost + ' € per il motore'); return; }
+  money -= cost; tuneCar(P.car, P.car.tune + 1); updateGarageUI(); beep(660, 0.12);
+  toast('🔧 Motore livello ' + P.car.tune + ' (−' + cost + ' €)', 1500);
+}
+function buyRepair() {
+  if (!P.car) return;
+  const cost = repairCost();
+  if (money < cost) { hint('Ti servono ' + cost + ' €'); return; }
+  money -= cost; P.car.vf = 0; P.car.vel.set(0, 0); P.car.stun = 0; beep(420, 0.1);
+  toast('🧰 Auto rimessa a nuovo (−' + cost + ' €)', 1400); updateGarageUI();
+}
+
+// ---- stunt jump ----
+const rampTex = canvasTex(64, 64, (c, w, h) => {
+  c.fillStyle = '#f2c200'; c.fillRect(0, 0, w, h); c.fillStyle = '#1a1a1a';
+  for (let i = -h; i < w; i += 32) { c.beginPath(); c.moveTo(i, h); c.lineTo(i + 16, h); c.lineTo(i + 16 + h, 0); c.lineTo(i + h, 0); c.closePath(); c.fill(); }
+});
+const rampMat = new THREE.MeshLambertMaterial({ map: rampTex });
+const stunts = [];
+{
+  const cand = [];
+  D.roads.forEach((r) => {
+    if (!['primary', 'secondary', 'tertiary'].includes(r.t)) return;
+    for (let i = 0; i < r.p.length - 2; i += 2) {
+      const x0 = r.p[i], z0 = r.p[i + 1], x1 = r.p[i + 2], z1 = r.p[i + 3], l = Math.hypot(x1 - x0, z1 - z0);
+      if (l > 45) cand.push({ x: (x0 + x1) / 2, z: (z0 + z1) / 2, fx: (x1 - x0) / l, fz: (z1 - z0) / l });
+    }
+  });
+  const picked = [];
+  for (const c of cand.sort(() => R() - 0.5)) {
+    if (picked.length >= 5) break;
+    if (Math.hypot(c.x - P.x, c.z - P.z) < 90) continue;
+    if (picked.some(p => Math.hypot(p.x - c.x, p.z - c.z) < 260)) continue;
+    picked.push(c);
+  }
+  for (const c of picked) {
+    const g = new THREE.Group();
+    const m = new THREE.Mesh(new THREE.BoxGeometry(7.5, 0.5, 10), rampMat);
+    m.rotation.x = -0.22; m.position.y = 0.55; m.castShadow = true; m.receiveShadow = true; g.add(m);
+    for (const sx of [-1, 1]) {
+      const s = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.9, 9.5), new THREE.MeshLambertMaterial({ color: '#555' }));
+      s.rotation.x = -0.22; s.position.set(sx * 3.6, 0.0, 0); g.add(s);
+    }
+    g.position.set(c.x, 0.2, c.z); g.rotation.y = Math.atan2(c.fx, c.fz); scene.add(g);
+    stunts.push({ x: c.x, z: c.z, fx: c.fx, fz: c.fz, cool: 0, done: false });
+  }
+}
+function stuntTick(car, dt) {
+  for (const st of stunts) {
+    if (st.cool > 0) st.cool -= dt;
+    if (car.y > 0.06 || st.cool > 0) continue;
+    const dx = car.x - st.x, dz = car.z - st.z;
+    if (dx * dx + dz * dz > 30) continue;
+    const dot = Math.sin(car.h) * st.fx + Math.cos(car.h) * st.fz;
+    if (dot > 0.35 && Math.abs(car.vf) > 9) {
+      car.vy = Math.abs(car.vf) * 0.5 + 3.5; car.air = 0; st.cool = 3;
+      beep(520, 0.1, 'triangle', 0.07);
+    }
+  }
+}
+function landCar(car) {
+  if (car.air < 0.5) return;
+  let st = null, bd = 60;
+  for (const s of stunts) { const d = Math.hypot(s.x - car.x, s.z - car.z); if (d < bd) { bd = d; st = s; } }
+  const first = !!st && !st.done;
+  if (st) st.done = true;
+  if (first) stats.stunts++;
+  const r = first ? 150 : 25;
+  addMoney(r);
+  toast('🤸 Stunt jump! +' + r + ' €', 2200);
+  beep(880, 0.1); setTimeout(() => beep(1175, 0.18), 110);
+}
+
+// ---- panini & kit: punti presi dai luoghi reali OpenStreetMap ----
+function spotNearPoi(p) {
+  const v = W.nearestDriveVert(p.x, p.z);
+  const e = W.walkAdj[v] && W.walkAdj[v][0];
+  if (!e) return null;
+  const [tx, tz] = laneTarget(v, e.to, 1.6 + R() * 2.2);
+  if (W.insideBuilding(tx, tz)) return null;
+  return { x: tx, z: tz };
+}
+const FOOD_AM = /^(shop:bakery|shop:general|shop:supermarket|bar|restaurant|ice_cream|fast_food|cafe)$/;
+const HEALTH_AM = /^(bar|restaurant|ice_cream|fast_food|cafe)$/;
+const ARMOR_AM = /^(bank|atm|post_office)$/;
+const panini = [];
+const PANINI_ICONS = ['🥪', '🥖', '🍞', '🥐'];
+function addPanino(x, z, src) {
+  const spr = makeLabel(PANINI_ICONS[panini.length % PANINI_ICONS.length], { size: 52, scale: 0.02, bg: 'rgba(255,255,255,0.92)', color: '#111' });
+  spr.position.set(x, 1.4, z); scene.add(spr);
+  panini.push({ x, z, spr, got: false, src: src || '' });
+}
+for (const p of D.pois) {
+  if (!p.n || !FOOD_AM.test(p.a || '')) continue;
+  for (let k = 0; k < 2 && panini.length < 20; k++) {
+    const s = spotNearPoi(p);
+    if (s && !panini.some(q => Math.hypot(q.x - s.x, q.z - s.z) < 12)) addPanino(s.x, s.z, p.n);
+  }
+}
+for (let guard = 0; panini.length < 20 && guard < 400; guard++) {
+  const v = townVerts[Math.floor(R() * townVerts.length)];
+  const e = W.walkAdj[v][Math.floor(R() * W.walkAdj[v].length)];
+  if (!e) continue;
+  const [tx, tz] = laneTarget(v, e.to, 1.6 + R() * 2.6);
+  if (W.insideBuilding(tx, tz)) continue;
+  if (panini.some(p => Math.hypot(p.x - tx, p.z - tz) < 60)) continue;
+  addPanino(tx, tz, '');
+}
+const pickups = [];
+function addPickup(kind, x, z, src) {
+  const spr = makeLabel(kind === 'hp' ? '✚' : '🛡️', { size: 48, scale: 0.022, bg: kind === 'hp' ? 'rgba(210,40,40,.92)' : 'rgba(30,90,200,.92)', color: '#fff' });
+  spr.position.set(x, 1.1, z); scene.add(spr);
+  pickups.push({ kind, x, z, spr, cool: 0, src: src || '' });
+}
+function placePickup(kind, re) {
+  let added = 0;
+  if (re) for (const p of D.pois) {
+    if (!p.n || !re.test(p.a || '')) continue;
+    const s = spotNearPoi(p);
+    if (s && !pickups.some(q => Math.hypot(q.x - s.x, q.z - s.z) < 12)) { addPickup(kind, s.x, s.z, p.n); added++; }
+  }
+  if (added) return;
+  for (let k = 0; k < 140; k++) {
+    const v = townVerts[Math.floor(R() * townVerts.length)];
+    const e = W.walkAdj[v][Math.floor(R() * W.walkAdj[v].length)];
+    if (!e) continue;
+    const [tx, tz] = laneTarget(v, e.to, 1.6 + R() * 2.4);
+    if (W.insideBuilding(tx, tz)) continue;
+    if (pickups.some(p => Math.hypot(p.x - tx, p.z - tz) < 80)) continue;
+    addPickup(kind, tx, tz, '');
+    return;
+  }
+}
+placePickup('hp', HEALTH_AM);
+for (let i = 0; i < 3; i++) placePickup('hp', null);
+placePickup('ar', ARMOR_AM);
+placePickup('ar', null);
+function updatePickups(dt) {
+  for (const p of panini) if (!p.got) {
+    p.spr.position.y = 1.35 + Math.sin(now * 2.4 + p.x) * 0.15;
+    if (Math.hypot(p.x - P.x, p.z - P.z) < 2.4) {
+      p.got = true; scene.remove(p.spr); stats.panini++; addMoney(25);
+      toast('🥪 Panino ' + (p.src ? 'da ' + p.src + ' ' : '') + stats.panini + '/' + panini.length + ' · +25 €', 2200);
+      beep(880, 0.1); setTimeout(() => beep(1170, 0.12), 100);
+    }
+  }
+  for (const p of pickups) {
+    if (p.cool > 0) { p.cool -= dt; if (p.cool <= 0) p.spr.visible = true; continue; }
+    p.spr.position.y = 1.1 + Math.sin(now * 2.6 + p.z) * 0.12;
+    if (Math.hypot(p.x - P.x, p.z - P.z) >= 2.3) continue;
+    if (p.kind === 'hp' && hp < maxHp) hp = maxHp;
+    else if (p.kind === 'ar' && armor < 100) armor = 100;
+    else continue;
+    p.cool = 40; p.spr.visible = false;
+    beep(920, 0.15, 'sine', 0.07);
+    hint(p.kind === 'hp' ? '❤️ Salute ripristinata' : '🛡️ Armatura ripristinata');
+  }
+}
+
+// ---- trucchi ----
+let cheatBuf = '', cheatT = 0;
+const CHEATS = [
+  { code: 'PANE', msg: '+500 €', fn: () => addMoney(500) },
+  { code: 'SALUTE', msg: 'salute e armatura al massimo', fn: () => { hp = 100; armor = 100; } },
+  { code: 'LIBERTA', msg: 'Polizia Locale distratta', fn: () => clearWanted() },
+  { code: 'TURBO', msg: 'motore elaborato', fn: () => { if (P.car) tuneCar(P.car, 3); else toast('Serve un\'auto', 1500); } },
+  { code: 'SOLE', msg: 'mattino', fn: () => { tod = 10; } },
+  { code: 'NOTTE', msg: 'notte fonda', fn: () => { tod = 23; } },
+];
+function keyCheat(k) {
+  if (!/^[a-z]$/i.test(k)) return;
+  cheatBuf = (cheatBuf + k.toUpperCase()).slice(-10); cheatT = 2.5;
+  for (const c of CHEATS) if (cheatBuf.endsWith(c.code)) {
+    c.fn();
+    toast('🎮 Trucco attivato: ' + c.msg, 2000);
+    beep(740, 0.1, 'square', 0.06); beep(988, 0.12, 'square', 0.06);
+    cheatBuf = '';
+    break;
+  }
+}
+
+// ---- telefono ----
+let phoneOpen = false;
+function renderPhone() {
+  const list = ACHIEVEMENTS.map(a => '<li class="' + (a.got ? 'on' : '') + '">' + (a.got ? '✅' : '⬜') + ' <b>' + a.name + '</b> — ' + a.desc + '</li>').join('');
+  const el = $('phoneBody');
+  if (!el) return;
+  el.innerHTML =
+    '<div class="pstats">🚗 ' + stats.km.toFixed(1) + ' km · 🏁 ' + stats.missions + ' missioni · 🥪 ' + stats.panini + '/' + panini.length +
+    ' · 🤸 ' + stats.stunts + ' stunt<br>💰 ' + stats.earned + ' € guadagnati · 🚨 ' + stats.crimes + ' reati · 🚔 ' + stats.busted + ' arresti</div>' +
+    '<ul class="pach">' + list + '</ul>';
+}
+function openPhone() {
+  if (garageOpen) return;
+  phoneOpen = true; $('phone').style.display = 'block'; renderPhone();
+  if (document.exitPointerLock) document.exitPointerLock();
+}
+function closePhone() { phoneOpen = false; $('phone').style.display = 'none'; }
+function bribe() {
+  if (wanted.level <= 0) { toast('Nessuna ricerca in corso', 1400); return; }
+  const cost = 100 * wanted.level;
+  if (money < cost) { toast('Ti servono ' + cost + ' € per la multa', 1800); return; }
+  money -= cost; clearWanted(true);
+  toast('🚔 Multa pagata alla Polizia Locale: −' + cost + ' €', 2400); beep(600, 0.1); updatePhoneMoney();
+}
+function updatePhoneMoney() { if (phoneOpen) renderPhone(); }
+function startMissionById(id) {
+  if (mission) { hint('Hai già una missione in corso'); return; }
+  const g = givers.find(q => q.id === id);
+  if (!g) return;
+  startMission(g); closePhone();
 }
 
 // ---------------- HUD helpers ----------------
@@ -380,6 +961,9 @@ function drawMinimap() {
   const dot = (x, z, col, r = 5) => { mctx.beginPath(); mctx.arc((x - P.x) * MS, (z - P.z) * MS, r / (zoom * 1.4), 0, Math.PI * 2); mctx.fillStyle = col; mctx.fill(); mctx.lineWidth = 2 / (zoom * 1.4); mctx.strokeStyle = '#fff'; mctx.stroke(); };
   if (!mission) for (const g of givers) dot(g.x, g.z, g.color, 7);
   for (const v of vehicles) if (v.type === 'vigili' && Math.hypot(v.x - P.x, v.z - P.z) < 200) dot(v.x, v.z, '#1e6bff', 3.5);
+  dot(garage.x, garage.z, '#2ec4b6', 5);
+  for (const st of stunts) if (Math.hypot(st.x - P.x, st.z - P.z) < 220) dot(st.x, st.z, '#f2c200', 4);
+  for (const p of panini) if (!p.got && Math.hypot(p.x - P.x, p.z - P.z) < 120) dot(p.x, p.z, '#e8b64c', 3.5);
   mctx.restore();
   // target indicator (clamped to the edge)
   if (mission) {
@@ -427,6 +1011,9 @@ function drawBigMap() {
   c.font = '700 13px system-ui';
   for (const pl of W.places) { c.beginPath(); c.arc(X(pl.x), Y(pl.z), 4, 0, 7); c.fillStyle = '#8e44ad'; c.fill(); c.lineWidth = 3; c.strokeStyle = '#fff'; c.strokeText(pl.name, X(pl.x), Y(pl.z) - 12); c.fillStyle = '#4a235a'; c.fillText(pl.name, X(pl.x), Y(pl.z) - 12); }
   if (!mission) for (const g of givers) { c.beginPath(); c.arc(X(g.x), Y(g.z), 9, 0, 7); c.fillStyle = g.color; c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 3; c.stroke(); c.fillStyle = '#111'; c.strokeText(g.title, X(g.x), Y(g.z) + 20); c.fillText(g.title, X(g.x), Y(g.z) + 20); }
+  for (const p of panini) if (!p.got) { c.beginPath(); c.arc(X(p.x), Y(p.z), 3, 0, 7); c.fillStyle = '#e8b64c'; c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.stroke(); }
+  for (const st of stunts) { c.beginPath(); c.arc(X(st.x), Y(st.z), 5, 0, 7); c.fillStyle = '#f2c200'; c.fill(); c.strokeStyle = '#333'; c.lineWidth = 1.5; c.stroke(); }
+  c.beginPath(); c.arc(X(garage.x), Y(garage.z), 7, 0, 7); c.fillStyle = '#2ec4b6'; c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke();
   if (mission) mission.steps.forEach((st, i) => { if (i < mission.step) return; c.beginPath(); c.arc(X(st.x), Y(st.z), i === mission.step ? 10 : 6, 0, 7); c.fillStyle = i === mission.step ? '#3fa9ff' : 'rgba(63,169,255,.5)'; c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 3; c.stroke(); });
   c.save(); c.translate(X(P.x), Y(P.z)); c.rotate(-(P.car ? P.car.h : P.h) + Math.PI);
   c.beginPath(); c.moveTo(0, -12); c.lineTo(8, 9); c.lineTo(0, 4); c.lineTo(-8, 9); c.closePath(); c.fillStyle = '#ff3b30'; c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 2.5; c.stroke(); c.restore();
@@ -442,7 +1029,15 @@ big.addEventListener('wheel', (e) => { bigZoom = clamp(bigZoom * (e.deltaY < 0 ?
 let foggy = false, started = false;
 function onKey(code) {
   if (!started) return;
-  if (code === 'KeyE' || code === 'KeyF' || code === 'Enter') toggleCar();
+  if (garageOpen || phoneOpen) {
+    if (code === 'Escape' || code === 'KeyK' || code === 'KeyE' || code === 'Enter') { closeGarage(); closePhone(); }
+    return;
+  }
+  if (code === 'KeyE' || code === 'KeyF' || code === 'Enter') { if (P.car && nearGarage()) openGarage(); else toggleCar(); }
+  if (code === 'KeyQ') radioSwitch(1);
+  if (code === 'KeyZ') radioSwitch(-1);
+  if (code === 'KeyK') openPhone();
+  if (code === 'KeyT') { tod = (tod + 2) % 24; toast('🕘 Ore ' + String(Math.floor(tod)).padStart(2, '0') + ':00', 1200); }
   if (code === 'KeyM') { bigMap = !bigMap; big.style.display = bigMap ? 'block' : 'none'; if (bigMap) { bigCx = P.x; bigCz = P.z; bigZoom = 1.6; drawBigMap(); if (document.exitPointerLock) document.exitPointerLock(); } }
   if (bigMap && (code === 'Equal' || code === 'NumpadAdd')) { bigZoom = Math.min(8, bigZoom * 1.2); drawBigMap(); }
   if (bigMap && (code === 'Minus' || code === 'NumpadSubtract')) { bigZoom = Math.max(0.6, bigZoom / 1.2); drawBigMap(); }
@@ -471,6 +1066,7 @@ function toggleCar() {
   let best = null, bd = 4.2;
   for (const v of vehicles) { const d = Math.hypot(v.x - P.x, v.z - P.z) - v.spec.len / 2 + 1; if (d < bd) { bd = d; best = v; } }
   if (!best) { hint('Nessun veicolo vicino'); return; }
+  const wasOccupied = !!best.ai || !!best.cop;
   if (best.ai) {
     // the driver gets out, not amused
     const pd = spawnPed(); const [fx, fz] = fwd(best.h);
@@ -479,7 +1075,12 @@ function toggleCar() {
     best.ai = null;
     if (best.type === 'vigili') toast('🚓 Hai preso l\'auto dei Vigili… non è una bella idea!');
   }
+  if (best.cop) { best.cop = false; const ci = cops.indexOf(best); if (ci >= 0) cops.splice(ci, 1); }
+  if (starterLabel) { if (starterLabel.parent) starterLabel.parent.remove(starterLabel); starterLabel = null; }
   P.car = best; best.vf = best.vf || 0; player.visible = false; camYaw = best.h; initAudio();
+  if (station < 0) station = 0;
+  { const rEl = $('radio'); if (rEl) rEl.textContent = '📻 ' + STATIONS[station].name; }
+  if (wasOccupied) setWanted(best.type === 'vigili' ? 2 : 1);
   const names = { utilitaria: 'Utilitaria', berlina: 'Berlina', furgone: 'Furgone', apecar: 'Motocarro', trattore: 'Trattore', vigili: 'Auto della Polizia Locale' };
   toast(names[best.type] || 'Veicolo', 1500);
 }
@@ -488,6 +1089,7 @@ function toggleCar() {
 const tmpPos = { x: 0, z: 0 };
 let shake = 0;
 function updatePlayerCar(car, dt) {
+  if (garageOpen || phoneOpen) { car.vf *= Math.max(0, 1 - dt * 4); car.speed = Math.abs(car.vf); return; }
   let thr = (keys.KeyW || keys.ArrowUp) ? 1 : 0, brk = (keys.KeyS || keys.ArrowDown) ? 1 : 0;
   let st = ((keys.KeyA || keys.ArrowLeft) ? 1 : 0) - ((keys.KeyD || keys.ArrowRight) ? 1 : 0);
   if (touch.active) { if (touch.y < -0.2) thr = -touch.y; if (touch.y > 0.2) brk = touch.y; st = -touch.x; }
@@ -510,8 +1112,15 @@ function updatePlayerCar(car, dt) {
   const k = Math.min(1, grip * dt);
   car.vel.x += (fx * car.vf - car.vel.x) * k; car.vel.y += (fz * car.vf - car.vel.y) * k;
   car.x += car.vel.x * dt; car.z += car.vel.y * dt;
-  collideCar(car, true);
+  if (car.y < 1.2) collideCar(car, true);
   car.speed = Math.hypot(car.vel.x, car.vel.y);
+  if (car.y <= 0.06) stuntTick(car, dt);
+  if (car.y > 0 || car.vy > 0) {
+    car.vy -= 16 * dt;
+    car.y += car.vy * dt;
+    if (car.y <= 0) { car.y = 0; car.vy = 0; landCar(car); car.air = 0; }
+    else car.air += dt;
+  }
 }
 function collideCar(car, isPlayer) {
   let moved = false, nx = 0, nz = 0;
@@ -526,7 +1135,7 @@ function collideCar(car, isPlayer) {
     if (vn < 0) {
       car.vel.x -= nx * vn * 1.35; car.vel.y -= nz * vn * 1.35;
       const [fx, fz] = fwd(car.h); car.vf = (car.vel.x * fx + car.vel.y * fz) * 0.85;
-      if (-vn > 4) { shake = Math.min(1, -vn / 15); beep(70 + R() * 30, 0.18, 'sawtooth', Math.min(0.2, -vn / 60)); }
+      if (-vn > 4) { shake = Math.min(1, -vn / 15); beep(70 + R() * 30, 0.18, 'sawtooth', Math.min(0.2, -vn / 60)); damagePlayer((-vn - 4) * 1.6); }
     }
   }
   // vehicles against vehicles
@@ -616,6 +1225,7 @@ function updatePed(p, dt) {
       // knocked over (cartoon style): pushed aside, then gets back up
       p.down = 2.2; const s = Math.sign(lat) || 1; p.dvx = fz * s * c.speed * 0.6 + fx * c.speed * 0.4; p.dvz = -fx * s * c.speed * 0.6 + fz * c.speed * 0.4;
       p.vy = 3 + c.speed * 0.15; c.vf *= 0.85; beep(140, 0.12, 'triangle', 0.1);
+      setWanted(1);
       hint('Attento ai pedoni!'); return;
     }
     if (along > 0 && along < 6 + c.speed * 0.6 && Math.abs(lat) < 2.2 && p.dodge <= 0) {
@@ -654,6 +1264,7 @@ function updatePed(p, dt) {
 }
 
 function updatePlayerFoot(dt) {
+  if (garageOpen || phoneOpen) { P.speed = 0; player.position.set(P.x, P.y, P.z); player.rotation.y = P.h; return; }
   let ix = ((keys.KeyD || keys.ArrowRight) ? 1 : 0) - ((keys.KeyA || keys.ArrowLeft) ? 1 : 0);
   let iz = ((keys.KeyW || keys.ArrowUp) ? 1 : 0) - ((keys.KeyS || keys.ArrowDown) ? 1 : 0);
   if (touch.active) { ix = touch.x; iz = -touch.y; }
@@ -663,7 +1274,7 @@ function updatePlayerFoot(dt) {
   if (l > 0.05) {
     const fx = Math.sin(camYaw), fz = Math.cos(camYaw), rx = -fz, rz = fx; // right vector
     const mx = (fx * iz + rx * ix) / Math.max(1, l), mz = (fz * iz + rz * ix) / Math.max(1, l);
-    sp = (run ? 7.2 : 3.4) * Math.min(1, l);
+    sp = (run ? 7.2 : 3.4) * Math.min(1, l) * (CHARACTERS[charIdx].speed || 1);
     P.x += mx * sp * dt; P.z += mz * sp * dt;
     const want = Math.atan2(mx, mz); P.h += wrap(want - P.h) * Math.min(1, dt * 12);
   }
@@ -674,7 +1285,7 @@ function updatePlayerFoot(dt) {
   for (const v of vehicles) {
     if (Math.abs(v.x - P.x) > 6 || Math.abs(v.z - P.z) > 6) continue;
     for (const c of carCircles(v)) { const dx = P.x - c[0], dz = P.z - c[1], d = Math.hypot(dx, dz), m = c[2] + 0.38; if (d < m && d > 1e-3 && P.y < v.spec.height * 0.7) { P.x += dx / d * (m - d); P.z += dz / d * (m - d); } }
-    if (v.ai && v.speed > 3) { const dx = P.x - v.x, dz = P.z - v.z; if (Math.hypot(dx, dz) < v.spec.len / 2) { P.vy = 4; } }
+    if (v.ai && v.speed > 3) { const dx = P.x - v.x, dz = P.z - v.z; if (Math.hypot(dx, dz) < v.spec.len / 2) { P.vy = 4; if (!v.hitCool) { damagePlayer(12); v.hitCool = 1.5; } } }
   }
   P.speed = sp;
   player.position.set(P.x, P.y, P.z); player.rotation.y = P.h;
@@ -689,7 +1300,7 @@ function updateCamera(dt) {
   const dists = P.car ? [8.5, 13, 5.5] : [5, 8, 3.2];
   dist = dists[camDistIdx];
   if (P.car) {
-    const c = P.car; tx = c.x; ty = c.spec.height + 0.6; tz = c.z; dist += c.spec.len * 0.3;
+    const c = P.car; tx = c.x; ty = c.spec.height + 0.6 + c.y; tz = c.z; dist += c.spec.len * 0.3;
     if (now - lastMouse > 1.2) { const back = c.vf < -1 ? c.h + Math.PI : c.h; camYaw += wrap(back - camYaw) * Math.min(1, dt * 3.2); camPitch += (0.22 - camPitch) * Math.min(1, dt * 2); }
     dist += Math.min(4, c.speed * 0.08);
   } else { tx = P.x; ty = P.y + 1.65; tz = P.z; }
@@ -726,16 +1337,19 @@ function loop(t) {
   if (bigMap) { renderer.render(scene, camera); return; }
 
   if (P.car) {
-    const steps = 2; for (let i = 0; i < steps; i++) updatePlayerCar(P.car, dt / steps);
-    P.x = P.car.x; P.z = P.car.z; P.y = 0;
+    const steps = 2; for (let i = 0; i < steps && P.car; i++) updatePlayerCar(P.car, dt / steps);
+    if (P.car) { P.x = P.car.x; P.z = P.car.z; P.y = 0; }
   } else updatePlayerFoot(dt);
   for (const v of vehicles) {
-    if (v === P.car) continue;
-    if (v.ai) updateTraffic(v, dt);
+    if (v === P.car || v.gone) continue;
+    if (v.hitCool) v.hitCool = Math.max(0, v.hitCool - dt);
+    if (v.cop) updateCop(v, dt);
+    else if (v.ai) updateTraffic(v, dt);
     else if (v.vf) { v.vf *= Math.max(0, 1 - dt * 2); advanceCarKinematic(v, dt); collideCar(v, false); if (Math.abs(v.vf) < 0.1) v.vf = 0; }
   }
+  for (let i = vehicles.length - 1; i >= 0; i--) if (vehicles[i].gone) { scene.remove(vehicles[i].mesh); if (P.car === vehicles[i]) P.car = null; vehicles.splice(i, 1); }
   for (const v of vehicles) {
-    v.mesh.position.set(v.x, 0, v.z); v.mesh.rotation.y = v.h;
+    v.mesh.position.set(v.x, v.y || 0, v.z); v.mesh.rotation.y = v.h;
     const ws = v.mesh.userData.wheels; const spin = (v === P.car ? v.vf : v.vf) * dt / 0.36;
     ws.forEach((w, i) => { w.rotation.x += spin / w.scale.x; if (i < 2 && v.type !== 'trattore') w.rotation.y = v === P.car ? v.steer : 0; if (v.type === 'trattore' && i >= 2) w.rotation.y = 0; });
     if (v.type === 'apecar' && v === P.car) ws[0].rotation.y = v.steer;
@@ -760,6 +1374,12 @@ function loop(t) {
   for (let i = bubbles.length - 1; i >= 0; i--) { const b = bubbles[i]; b.t -= dt; if (b.t <= 0) { b.obj.mesh.remove(b.b); if (b.obj.bubble === b.b) b.obj.bubble = null; bubbles.splice(i, 1); } }
 
   updateMission(dt);
+  updateWanted(dt);
+  updatePickups(dt);
+  checkAchievements();
+  radioTick();
+  if (P.car) stats.km += (P.car.speed || 0) * dt / 1000;
+  if (flashT > 0) { flashT -= dt; if (flashT <= 0) { const f = $('flash'); if (f) f.classList.remove('on'); const m = $('flashmsg'); if (m) m.style.opacity = 0; } }
   updateCamera(dt);
 
   // labels only when close
@@ -772,17 +1392,17 @@ function loop(t) {
     arrow.rotation.y = Math.atan2(st.x - P.x, st.z - P.z);
   } else arrow.visible = false;
 
-  // sun & shadows follow the player
-  sun.position.set(P.x + SUN_DIR.x * 250, SUN_DIR.y * 250, P.z + SUN_DIR.z * 250); sun.target.position.set(P.x, 0, P.z);
+  // ciclo giorno/notte, sole e ombre
+  updateDayNight(dt);
+  sun.position.set(P.x + sunDir.x * 250, sunDir.y * 250, P.z + sunDir.z * 250); sun.target.position.set(P.x, 0, P.z);
   // fog
   const fogNear = foggy ? 6 : 220, fogFar = foggy ? 120 : 1500;
   scene.fog.near += (fogNear - scene.fog.near) * Math.min(1, dt * 1.5); scene.fog.far += (fogFar - scene.fog.far) * Math.min(1, dt * 1.5);
-  const fc = foggy ? FOG : SKY; scene.fog.color.lerp(fc, Math.min(1, dt * 1.5)); scene.background.copy(scene.fog.color);
-  hemi.intensity += ((foggy ? 1.5 : 1.1) - hemi.intensity) * dt; sun.intensity += ((foggy ? 0.5 : 2.0) - sun.intensity) * dt;
+  const fc = foggy ? FOG : skyNow; scene.fog.color.lerp(fc, Math.min(1, dt * 1.5)); scene.background.copy(scene.fog.color);
 
   // audio
   if (engGain) {
-    if (P.car && !muted) { const s = P.car.speed; const ty = P.car.type; const base = ty === 'trattore' ? 30 : ty === 'apecar' ? 70 : 45; engOsc.frequency.value = base + s * (ty === 'apecar' ? 7 : 3.2) + ((keys.KeyW || keys.ArrowUp) ? 12 : 0); engFilt.frequency.value = 300 + s * 25; engGain.gain.value = 0.035 + Math.min(0.03, s * 0.001); }
+    if (P.car && !muted) { const s = P.car.speed || 0; const ty = P.car.type; const base = ty === 'trattore' ? 30 : ty === 'apecar' ? 70 : 45; engOsc.frequency.value = base + s * (ty === 'apecar' ? 7 : 3.2) + ((keys.KeyW || keys.ArrowUp) ? 12 : 0); engFilt.frequency.value = 300 + s * 25; engGain.gain.value = 0.035 + Math.min(0.03, s * 0.001); }
     else engGain.gain.value = 0;
   }
 
@@ -792,6 +1412,11 @@ function loop(t) {
   $('money').textContent = money.toLocaleString('it-IT') + ' €';
   $('speed').style.display = P.car ? 'block' : 'none';
   if (P.car) $('speed').innerHTML = `${Math.round(P.car.speed * 3.6)}<small> km/h</small>`;
+  const hpEl = $('hpfill'); if (hpEl) hpEl.style.width = Math.max(0, Math.min(100, hp / maxHp * 100)) + '%';
+  const arEl = $('arfill'); if (arEl) arEl.style.width = armor + '%';
+  const wEl = $('wanted'); if (wEl) { wEl.textContent = wanted.level ? '★'.repeat(wanted.level) + '☆'.repeat(5 - wanted.level) : ''; wEl.style.opacity = wanted.level ? 1 : 0; }
+  const pkEl = $('pickups'); if (pkEl) pkEl.textContent = '🥪 ' + stats.panini + '/' + panini.length;
+  const rdEl = $('radio'); if (rdEl) { rdEl.style.display = P.car ? 'block' : 'none'; if (P.car && station >= 0) rdEl.textContent = '📻 ' + STATIONS[station].name; }
   if (mission) {
     $('mission').style.display = 'block';
     const st = mission.steps[mission.step]; const d = Math.round(Math.hypot(st.x - P.x, st.z - P.z));
@@ -802,7 +1427,8 @@ function loop(t) {
   if (hintT > 0) hintT -= dt; else {
     let h = '';
     if (!P.car) { let near = vehicles.some(v => Math.hypot(v.x - P.x, v.z - P.z) < v.spec.len / 2 + 2.5); if (near) h = isTouch ? 'Premi 🚗 per salire' : 'Premi E per salire'; }
-    else if (P.car.speed < 1 && !mission) h = isTouch ? '' : 'E per scendere · H clacson';
+    else if (nearGarage() && P.car.speed < 2) h = 'E per entrare in officina';
+    else if (P.car.speed < 1 && !mission) h = isTouch ? '' : 'E per scendere · H clacson · Q radio';
     $('hint').textContent = h; $('hint').style.opacity = h ? 1 : 0;
   }
   if (toastT > 0) { toastT -= dt; if (toastT <= 0) $('toast').classList.remove('show'); }
@@ -814,16 +1440,56 @@ let idleA = 0;
 function idleCam(dt) {
   idleA += dt * 0.06; const r = 260;
   camera.position.set(P.x + Math.cos(idleA) * r, 140, P.z + Math.sin(idleA) * r); camera.lookAt(P.x, 0, P.z);
-  sun.position.set(P.x + SUN_DIR.x * 250, SUN_DIR.y * 250, P.z + SUN_DIR.z * 250); sun.target.position.set(P.x, 0, P.z);
+  sun.position.set(P.x + sunDir.x * 250, sunDir.y * 250, P.z + sunDir.z * 250); sun.target.position.set(P.x, 0, P.z);
   player.position.set(P.x, 0, P.z);
 }
+// ---- collega i pannelli di officina e telefono ----
+{
+  const sw = $('swatches');
+  if (sw) for (const c of ['#c0392b', '#2e86c1', '#e8e8e8', '#1c2833', '#d4ac0d', '#239b56', '#8e44ad', '#ff7a00']) {
+    const b = document.createElement('button'); b.className = 'sw'; b.style.background = c;
+    b.title = c; b.addEventListener('click', () => buyPaint(c)); sw.appendChild(b);
+  }
+  const charsEl = $('chars');
+  if (charsEl) {
+    charsEl.innerHTML = CHARACTERS.map((c, i) =>
+      '<button class="char' + (i === charIdx ? ' sel' : '') + '" data-i="' + i + '">' +
+      '<span class="avatar" style="background:linear-gradient(180deg,' + c.shirt + ' 58%,' + c.pants + ' 58%)"><i style="background:' + c.skin + '"></i></span>' +
+      '<span class="cname"><b>' + c.name + '</b><small>' + c.tag + '</small></span>' +
+      '<em>' + c.desc + '</em></button>').join('');
+    charsEl.querySelectorAll('.char').forEach(b => b.addEventListener('click', () => selectCharacter(+b.dataset.i)));
+  }
+  const on = (id, fn) => { const el = $(id); if (el) el.addEventListener('click', fn); };
+  on('gTune', buyTune); on('gRepair', buyRepair); on('gClose', closeGarage);
+  on('pTaxi', () => startMissionById('taxi'));
+  on('pPane', () => startMissionById('pane'));
+  on('pGiro', () => startMissionById('giro'));
+  on('pPolice', bribe);
+  on('pMeteo', () => { foggy = !foggy; toast(foggy ? '🌫️ È arrivata la nebbia della Bassa…' : '☀️ La nebbia si è alzata', 2000); });
+  on('pClose', closePhone);
+}
+addEventListener('keydown', (e) => { if (started && !garageOpen && !phoneOpen) keyCheat(e.key); });
+
 $('loading').style.display = 'none';
 $('intro').style.display = 'flex';
 $('play').addEventListener('click', () => {
   started = true; $('intro').style.display = 'none'; $('hud').style.display = 'block'; initAudio();
   if (AC && AC.state === 'suspended') AC.resume();
-  camYaw = MUN ? MUN.faceYaw : Math.PI; toast('Benvenuto a Moglia! Raggiungi un segnale colorato per iniziare una missione.', 4500);
+  const c = CHARACTERS[charIdx];
+  maxHp = c.maxHp; hp = maxHp; armor = 0;
+  if (c.bonus) addMoney(c.bonus);
+  camYaw = MUN ? MUN.faceYaw : Math.PI; toast('Benvenuto a Moglia, ' + c.name + '! Hai un\'auto davanti: premi E per salire.', 5000);
   if (!isTouch) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (_) {} }
 });
 requestAnimationFrame(loop);
-window.__game = { P, W, vehicles, peds, get fps() { return fps; }, keys, startMission, givers, camera, setYaw: (y) => camYaw = y, setPitch: (p) => { camPitch = p; lastMouse = now + 100; }, toggleCar };
+window.__game = {
+  P, W, vehicles, peds, get fps() { return fps; }, keys, startMission, givers, camera,
+  setYaw: (y) => camYaw = y, setPitch: (p) => { camPitch = p; lastMouse = now + 100; }, toggleCar,
+  stats, wanted, cops, panini, stunts, pickups, garage, ACHIEVEMENTS, STATIONS, CHARACTERS, selectCharacter,
+  damage: damagePlayer, crime: setWanted, clearWanted, addMoney, tuneCar, paintCar, radioSwitch,
+  get hp() { return hp; }, get armor() { return armor; }, get maxHp() { return maxHp; }, get charIdx() { return charIdx; }, get money() { return money; },
+  get tod() { return tod; }, setTod: (t) => { tod = t; }, get sunIntensity() { return sun.intensity; },
+  get starterCar() { return starterCar; },
+  get station() { return station; }, get phoneOpen() { return phoneOpen; }, get garageOpen() { return garageOpen; },
+  openGarage, closeGarage, openPhone, closePhone,
+};
