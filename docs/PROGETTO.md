@@ -92,23 +92,26 @@ Quattro personaggi proposti all'avvio, con statistica diversa:
 
 **Limite dichiarato:** non c'è ancora il multiplayer reale. Per giocare in due serve un backend (WebSocket/server autoritativo) e quindi hosting: il gioco oggi è un file statico senza servizi esterni. La schermata si chiama "Moglia Online" perché riproduce la selezione personaggio in stile GTA Online. Il multiplayer è la prossima decisione aperta.
 
-## Lingua e dialetto
+## Lingua, dialetto e localizzazione JSON
 
-Richiesta del 22/11/2026: "tutte le conversazioni e messaggi vanno in dialetto mogliese". Sono stati portati in dialetto della Bassa:
+Richiesta del 22/11/2026: "tutte le conversazioni e messaggi vanno in dialetto mogliese". Il 22/11 è stato aggiunto anche: "estrapola tutto il testo dentro un file json localizzato".
 
-- schermata iniziale, personaggi, comandi, missioni, trucchi e crediti;
-- HUD, suggerimenti contestuali, messaggi di missione e di ricompensa;
-- officina, telefono, obiettivi, statistiche e trucchi;
-- voci dei pedoni, dei clienti e dei conducenti (frasi di scherno, clacson, incidenti);
-- mappa completa, aiuti e testi di sistema.
+**Tutti i testi di gioco stanno in `src/lang/mogliese.json`.** Non ci sono più stringhe utente sparse nel codice.
 
-Restano in italiano o nella forma originale:
+- `src/main.js` importa il JSON, espone `t('gruppo.chiave', { var })` e sostituisce i segnaposto `{var}`. Le parti statiche di `src/index.template.html` hanno attributi `data-i18n="gruppo.chiave"` e vengono riempite da `applyI18n()` all'avvio.
+- Il JSON contiene: caricamento, schermata iniziale, comandi, personaggi, missioni, obiettivi, HUD, mappa, officina, telefono, trucchi, particelle/incidenti, voci dei pedoni, veicoli, meteo, audio.
+- Per aggiungere una lingua: si copia `mogliese.json` (per esempio in `it.json`), si traducono i valori lasciando le chiavi, e si cambia l'import in `src/main.js`. La struttura è già pronta per un selettore di lingua.
+- I **nomi dei luoghi OSM** (Panificio Ada, Piazza Guglielmo Marconi, Via Giacomo Leopardi…), i nomi propri di strade/piazze/attività, le stazioni radio e la nota di licenza ODbL restano nella forma originale: sono dati o obblighi di attribuzione, non testo traducibile.
 
-- **nomi dei luoghi OSM** (Panificio Ada, Piazza Guglielmo Marconi, Via Giacomo Leopardi…): sono dati, non testo di gioco, e non vanno modificati;
-- **attribuzione e licenza ODbL**, per correttezza legale;
-- nomi propri di strade, piazze e attività.
+### Base linguistica
 
-La grafia usata è una bozza di mantovano/basso mantovano (per esempio "Zöga", "el tò omin", "Sèra", "Te serve n'auto", "I è rivà la nebbia"). Prima di considerarla definitiva va rivista da un parlante di Moglia: le correzioni si fanno direttamente nelle stringhe di `src/main.js` e `src/index.template.html` (non c'è ancora un file di traduzioni separato).
+Moglia non ha un vocabolario dedicato online: parla il **dialetto basso mantovano** (emiliano dell'Oltrepò mantovano), in transizione con ferrarese, mirandolese e guastallese. Fonti usate:
+
+- Wikipedia, "Dialetto basso mantovano": elenco dei comuni (Moglia inclusa), pronomi (mì, tì, lü, lé, lór), forme verbali (a vègn, tì 't sè), lessico (nisün, gnint, mèi, incö, dmàn), infiniti (far, andàr, dar, ésar).
+- Wikimapia, "Comune di Moglia": il nome locale di Moglia è **La Mòja**.
+- Marco Moretti, *Al Paradis*, poesie nel dialetto dell'area Suzzara–Pegognaga–Gonzaga–Moglia–San Benedetto Po (indicato nella scheda Academia.edu).
+
+La grafia in `mogliese.json` è una **bozza di basso mantovano** ("La Mòja", "Zöga", "sèrn", "sàra", "Te sèrve n'auto", "L'è rivà la nebbia", "mutór"). Non esiste una grammatica normativa del mogliese e la fonetica varia molto anche tra paesi vicini: le correzioni di un parlante di Moglia vanno fatte direttamente nei valori di `src/lang/mogliese.json`, senza toccare le chiavi.
 
 ## Fisica, incidenti e veicoli
 

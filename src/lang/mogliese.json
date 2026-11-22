@@ -1,0 +1,197 @@
+{
+  "locale": "basso-mantovano",
+  "label": "Dialét Bàss Mantuàn (Moglia / La Mòja)",
+  "note": "Bozza basata sul basso mantovano (emiliano) parlato nell'Oltrepò mantovano, di cui Moglia fa parte. I nomi dei luoghi OpenStreetMap non si traducono.",
+  "text": {
+    "meta": {
+      "title": "Moglia City – mini open world in de la Bassa mantovana"
+    },
+    "loading": {
+      "map": "Carisi la mappa…",
+      "world": "A fàbric le vie de La Mòja…"
+    },
+    "intro": {
+      "sub": "Un mini open world in di vie veri de La Mòja (MN)",
+      "online": "La Mòja Online · sèrn el tò omìn",
+      "controls": {
+        "walk": "camina · guida (anca i frècce)",
+        "mouse": "guàrda intórna (cliche per blocàr el cursór)",
+        "run": "cor",
+        "vehicle": "sal / cala da un veicol",
+        "jump": "salta · fren a man",
+        "horn": "clacson · mét l'auto in strada",
+        "map": "mappa del paés · cambia la telecamera",
+        "radio": "cambia stazión radio · telefòn",
+        "time": "avanza l'ora · nebbia de la Bassa · audio"
+      },
+      "missions": {
+        "pane": "consegne del pan a temp",
+        "taxi": "accompagna i client",
+        "giro": "gara a tape",
+        "police": "fà el malfàt e scapa da le stèle",
+        "garage": "vernìs e mutór per la tò auto",
+        "panini": "20 panìn scondù in paés e 5 salt acrobàtic"
+      },
+      "cheats": "Truchi: scriv",
+      "play": "Zöga",
+      "welcome": "Benvegnù a La Mòja, {name}! Gh'è un'auto davanti: prem E per salì.",
+      "credit": "Strade, edifici e luoghi: © OpenStreetMap contributors, licenza ODbL. Facciate e altezze generate dove mancano i dati."
+    },
+    "hud": {
+      "help": "E sal/cala · Q radio · K telefòn · M mappa · N nebbia · C telecamera",
+      "hintEnterCar": "Prem E per salì",
+      "hintEnterCarTouch": "Prem 🚗 per salì",
+      "hintExitCar": "E per calàr · H clacson · Q radio",
+      "hintGarage": "E per andàr in officina",
+      "missionReward": "{dist} m · premi {reward} €"
+    },
+    "characters": {
+      "luca": { "tag": "El véloce", "desc": "El cor püsé de tüti" },
+      "ada": { "tag": "La furnèra", "desc": "Salute de vendèmia" },
+      "gigi": { "tag": "El mecànic", "desc": "Officina con isconto" },
+      "sara": { "tag": "La turista", "desc": "+200 € in scarsèla" }
+    },
+    "vehicles": {
+      "utilitaria": "Utilitaria",
+      "berlina": "Berlina",
+      "sportiva": "Sportiva",
+      "furgone": "Furgon",
+      "camion": "Camion",
+      "autobus": "Autobus",
+      "apecar": "Motocar",
+      "trattore": "Trator",
+      "vigili": "Auto de la Polizia Locale",
+      "generic": "Veicol"
+    },
+    "missions": {
+      "busy": "Te gh'è già na mission in gir",
+      "timeUp": "⏱️ Temp scadù! Mission falida.",
+      "completed": "✅ {title} fata! +{reward} € (bonus temp {bonus} €)",
+      "pane": {
+        "title": "Consegna del pan",
+        "loaded": "🥖 Pan cargà! Portel a {dest}",
+        "step": "Porta el pan cald a: {dest}"
+      },
+      "taxi": {
+        "title": "Taxi de Moglia",
+        "waiting": "🚕 Un client te speta! Te sèrve n'auto.",
+        "pickup": "Va a tòr el client",
+        "drop": "Porta el client a: {dest}",
+        "needCar": "Te sèrve n'auto per el client!",
+        "stopPickup": "Férmte per fàr salì el client",
+        "stopDrop": "Férmte per fàr calàr el client",
+        "greeting": "Bondì! Andèm?"
+      },
+      "giro": {
+        "title": "Giro de Moglia",
+        "start": "🏁 Via! Passa da tute le tape prima che 'l temp el scada.",
+        "step": "Tapa {n}/{total}: {name}"
+      }
+    },
+    "wanted": {
+      "up": "🚨 Ricercà: {stars}",
+      "cleared": "✅ Ricercà a zéro",
+      "escaped": "🕶️ Te i è seminar! Ricercà a zéro",
+      "busted": "🚔 Arrestà da la Polizia Locale. Multa: {fine} €"
+    },
+    "health": {
+      "ko": "💀 Te s'è svenù. Te s'è sveglià in Piazza Matteotti (−{loss} €)"
+    },
+    "achievements": {
+      "unlocked": "🏆 Obietiv sblocà: {name}",
+      "first": { "name": "Prima consegna", "desc": "Completa na mission" },
+      "pro": { "name": "Tüt fà", "desc": "Completa 5 mission" },
+      "panini10": { "name": "Paninèr", "desc": "Cata 10 panìn" },
+      "panini20": { "name": "Fam de Moglia", "desc": "Cata tüti i 20 panìn" },
+      "stunt1": { "name": "Acrobata", "desc": "Fà un salt acrobàtic" },
+      "stunt3": { "name": "Cascadùr", "desc": "Fà 3 salt acrobàtic difarènt" },
+      "wanted3": { "name": "Ricercà", "desc": "Riva a 3 stèle de ricercà" },
+      "escape": { "name": "Fantasma", "desc": "Semina la Polizia Locale" },
+      "km5": { "name": "Turista", "desc": "Fà 5 km in auto" },
+      "tune3": { "name": "Elaborà", "desc": "Porta un mutór al livèl 3" }
+    },
+    "garage": {
+      "info": "{vehicle} · mutór {tune}/3 · {money} € in scarsèla · {source}",
+      "sourceOsm": "posizión da OpenStreetMap",
+      "sourceProject": "posizión dal progèt (ancóra nò su OSM)",
+      "tuneButton": "Potenzi el mutór — {cost} €",
+      "repairButton": "Giösta l'auto — {cost} €",
+      "paintPoor": "Te sèrven {cost} € per la vernìs",
+      "paintDone": "🎨 Vernìs növa! −{cost} €",
+      "tuneMax": "Mutór già al màsim",
+      "tunePoor": "Te sèrven {cost} € per el mutór",
+      "tuneDone": "🔧 Mutór livèl {level} (−{cost} €)",
+      "repairPoor": "Te sèrven {cost} €",
+      "repairDone": "🧰 Auto giustada a nöf (−{cost} €)",
+      "close": "Sàra (E)"
+    },
+    "phone": {
+      "title": "📱 Telefòn",
+      "close": "Sàra (K)",
+      "contacts": {
+        "taxi": "Ciama un client da cariàr",
+        "pane": "Na növa consegna del pan",
+        "giro": "Gara a tape per el paés",
+        "police": "Paga la multa e mét a zéro el ricercà",
+        "meteo": "Nebbia sì o nebbia no"
+      },
+      "stats": "🚗 {km} km · 🏁 {missions} mission · 🥪 {panini}/{total} · 🤸 {stunts} stunt\n💰 {earned} € guadagnà · 🚨 {crimes} reat · 🚔 {busted} arrest",
+      "bribeNone": "Nissùna ricerca in gir",
+      "bribePoor": "Te sèrven {cost} € per la multa",
+      "bribeDone": "🚔 Multa pagà a la Polizia Locale: −{cost} €"
+    },
+    "cheats": {
+      "activated": "🎮 Truc ativà: {msg}",
+      "money": "+500 €",
+      "health": "salute e armadüra al màsim",
+      "police": "Polizia Locale distràta",
+      "motor": "mutór elaborà",
+      "morning": "matina",
+      "night": "not fonda",
+      "needCar": "Te sèrve n'auto"
+    },
+    "peds": {
+      "dodge": ["Ohé!", "Ma te sé mat?!", "Piàn!", "Òcio!", "Va' piàn!", "Eh là!"],
+      "hit": ["Ma va' là!", "Ahi!", "Te gh'è la patente?", "Ma dai!"],
+      "car": ["Ehi! La me machina!", "Làder! Torna chi!", "Ma còssa fet?!"],
+      "honk": ["Dai, mòvte!", "Alóra?!", "Svéglia!"],
+      "driverLost": "La me machina!"
+    },
+    "fx": {
+      "stunt": "🤸 Salt acrobàtic! +{reward} €",
+      "panino": "🥪 Panìn{source} {count}/{total} · +25 €",
+      "paninoSource": " da {src}",
+      "health": "❤️ Salute a post",
+      "armor": "🛡️ Armadüra a post",
+      "wrecked": "💥 Auto distruta!"
+    },
+    "hints": {
+      "slowExit": "Va piàn prima de calàr!",
+      "noVehicle": "Nissùn veicol in gir",
+      "policeStolen": "🚓 Te gh'è tölt l'auto dei Vigili… l'è mia na bèla idea!",
+      "pedestrians": "Òcio ai pedón!",
+      "missionBusy": "Te gh'è già na mission in gir"
+    },
+    "radio": {
+      "onlyInCar": "La radio la se sent sól in auto"
+    },
+    "fog": {
+      "on": "🌫️ L'è rivà la nebbia de la Bassa…",
+      "off": "☀️ La nebbia la s'è alzada"
+    },
+    "audio": {
+      "off": "🔇 Audio smorzà",
+      "on": "🔊 Audio aces"
+    },
+    "time": {
+      "jump": "🕘 Ore {hour}:00"
+    },
+    "map": {
+      "footer": "Moglia (MN) · rotèla/+/- zoom · tira per spostàr · M per sàra",
+      "credit": "Dati © OpenStreetMap contributors (ODbL)"
+    },
+    "vehicle": {
+      "reset": "🔧 Auto rimessa in strada"
+    }
+  }
+}

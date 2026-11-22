@@ -20,7 +20,7 @@ Un mini open world 3D in terza persona, nel browser, ambientato nelle vie vere d
 - **Stunt jump e collezionabili**: cinque rampe in paese e 20 panini nascosti, molti dei quali nei negozi OSM reali.
 - **Telefono, trucchi, giorno/notte, obiettivi**: contatti utili, trucchi digitati, ciclo solare e dieci obiettivi.
 - **Interfaccia**: minimappa con il nome della via, mappa completa del paese con i nomi delle strade, nebbia della Bassa, controlli touch per telefono.
-- **Lingua**: interfaccia, messaggi, missioni e voci dei pedoni in dialetto della Bassa; i nomi dei luoghi vengono da OSM e restano nella forma originale, così come la nota di licenza.
+- **Lingua**: interfaccia, messaggi, missioni e voci dei pedoni in dialetto della Bassa, con tutti i testi raccolti in `src/lang/mogliese.json`; i nomi dei luoghi vengono da OSM e restano nella forma originale, così come la nota di licenza.
 
 | Municipio | Mappa del paese |
 |---|---|
@@ -95,7 +95,8 @@ src/
   landmarks.js          edifici modellati a mano (Panificio Ada, Municipio)
   entities.js           modelli low-poly di veicoli e persone
   util.js               geometria, texture procedurali, griglia spaziale
-  index.template.html   pagina, HUD e stili
+  index.template.html   pagina, HUD e stili (testi via data-i18n)
+  lang/mogliese.json    tutti i testi di gioco, in dialetto della Bassa
 data/moglia.json        mappa in formato compatto (generata da tools/osm2json.py)
 tools/                  download e conversione dei dati OpenStreetMap
 tests/smoke.mjs         test automatico nel browser
