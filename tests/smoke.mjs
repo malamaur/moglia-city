@@ -26,6 +26,10 @@ async function holdUntilMoved(key, min, timeout = 20000) {
 }
 const fail = async (msg) => { console.error('✗ ' + msg); await browser.close(); process.exit(1); };
 
+// il meteo reale non deve dipendere dalla rete durante il test: si risponde con una pioggia simulata
+await page.route('**/api.open-meteo.com/**', (r) => r.fulfill({ status: 200, contentType: 'application/json', headers: { 'access-control-allow-origin': '*' },
+  body: JSON.stringify({ current: { time: '2026-11-22T12:45', temperature_2m: 7.4, weather_code: 63, cloud_cover: 100, precipitation: 2.1, rain: 2.1, snowfall: 0, wind_speed_10m: 14, wind_direction_10m: 70, visibility: 9000 } }) }));
+await page.addInitScript(() => { try { localStorage.removeItem('moglia_light'); } catch (_) {} });
 await page.goto(url);
 await page.waitForSelector('#play', { state: 'visible', timeout: 60000 });
 
@@ -121,6 +125,19 @@ const day = await page.evaluate(async () => {
 });
 if (!(day.night < day.noon)) await fail('ciclo giorno/notte non cambia il sole: ' + JSON.stringify(day));
 console.log('✓ ciclo giorno/notte');
+
+// luce e meteo reali, poi "sempre giorno"
+const light = await page.evaluate(async () => {
+  const g = window.__game; const wait = async (cond) => { const t0 = performance.now(); while (performance.now() - t0 < 10000 && !cond()) await new Promise(r => setTimeout(r, 100)); };
+  g.setLightMode('reale', true); await wait(() => g.weatherState === 'ok' && g.rainOn);
+  const real = { state: g.weatherState, label: g.weather && g.weather.label, rain: g.rainOn, clock: document.getElementById('clock').textContent };
+  g.setLightMode('giorno', true); await wait(() => g.sunIntensity > 1.5 && !g.rainOn);
+  const always = { sun: g.sunIntensity, rain: g.rainOn, y: g.sunDir.y, mode: g.lightMode };
+  return { real, always };
+});
+if (light.real.state !== 'ok' || !light.real.rain) await fail('meteo reale non applicato: ' + JSON.stringify(light));
+if (light.always.sun < 1.5 || light.always.rain || light.always.y < 0.5) await fail('modalità sempre giorno non funzionante: ' + JSON.stringify(light));
+console.log('✓ meteo reale (' + light.real.label + ', ' + light.real.clock + ') e sempre giorno');
 
 await page.evaluate(() => {
   const g = window.__game; if (g.P.car) { g.P.car.speed = 0; g.P.car.vf = 0; g.P.car.vel.set(0, 0); g.toggleCar(); }

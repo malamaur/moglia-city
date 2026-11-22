@@ -22,7 +22,8 @@
         "horn": "clacson · mét l'auto in strada",
         "map": "mappa del paés · cambia la telecamera",
         "radio": "cambia stazión radio · telefòn",
-        "time": "avanza l'ora · nebbia de la Bassa · audio"
+        "time": "avanza l'ora · nebbia de la Bassa · audio",
+        "light": "luce: Moglia adès · sempre dì · ciclo de zög"
       },
       "missions": {
         "pane": "consegne del pan a temp",
@@ -38,7 +39,7 @@
       "credit": "Strade, edifici e luoghi: © OpenStreetMap contributors, licenza ODbL. Facciate e altezze generate dove mancano i dati."
     },
     "hud": {
-      "help": "E sal/cala · Q radio · K telefòn · M mappa · N nebbia · C telecamera",
+      "help": "E sal/cala · Q radio · K telefòn · M mappa · L luce/meteo · N nebbia · C telecamera",
       "hintEnterCar": "Prem E per salì",
       "hintEnterCarTouch": "Prem 🚗 per salì",
       "hintExitCar": "E per calàr · H clacson · Q radio",
@@ -127,13 +128,14 @@
     },
     "phone": {
       "title": "📱 Telefòn",
+      "meteoName": "Meteo e luce",
       "close": "Sàra (K)",
       "contacts": {
         "taxi": "Ciama un client da cariàr",
         "pane": "Na növa consegna del pan",
         "giro": "Gara a tape per el paés",
         "police": "Paga la multa e mét a zéro el ricercà",
-        "meteo": "Nebbia sì o nebbia no"
+        "meteo": "Moglia adès, sempre dì o ciclo de zög"
       },
       "stats": "🚗 {km} km · 🏁 {missions} mission · 🥪 {panini}/{total} · 🤸 {stunts} stunt\n💰 {earned} € guadagnà · 🚨 {crimes} reat · 🚔 {busted} arrest",
       "bribeNone": "Nissùna ricerca in gir",
@@ -192,6 +194,37 @@
     },
     "vehicle": {
       "reset": "🔧 Auto rimessa in strada"
+    },
+    "light": {
+      "modes": {
+        "reale": "🌍 Moglia adesso",
+        "giorno": "☀️ Sempre giorno",
+        "gioco": "🎮 Ciclo di gioco"
+      },
+      "sub": {
+        "reale": "ora, sole e meteo veri",
+        "giorno": "luce diurna e sole, sempre",
+        "gioco": "giorno e notte accelerati"
+      },
+      "toast": {
+        "giorno": "luce del giorno e sole",
+        "gioco": "un giorno ogni 12 minuti"
+      },
+      "loading": "leggo il meteo…",
+      "unavailable": "meteo non disponibile, solo sole reale",
+      "pending": "meteo in arrivo",
+      "clockAlways": "sempre giorno",
+      "clouds": "nuvole {pct}%",
+      "wind": "vento {kmh} km/h",
+      "panelTitle": "Luce e meteo",
+      "panelLoading": "Leggo il meteo di Moglia…",
+      "panelError": "Meteo non raggiungibile: uso solo il sole reale.",
+      "panelIdle": "Il meteo si legge in modalità “Moglia adesso”.",
+      "fogOn": "🌫️ Metti la nebbia della Bassa",
+      "fogOff": "☀️ Togli la nebbia",
+      "refresh": "🔄 Aggiorna il meteo",
+      "credit": "Dati meteo: Open-Meteo.com (CC BY 4.0) · tasto L per cambiare modalità",
+      "welcome": "🌍 Moglia adesso · {weather} · L per cambiare luce"
     }
   }
 }

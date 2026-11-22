@@ -199,6 +199,23 @@ npm test              # test Playwright (richiede npx playwright install chromiu
 
 `data/moglia.json` è un database derivato da OSM: resta sotto ODbL. Non va modificato a mano per aggiungere luoghi: si aggiorna il dato OSM e si rigenera.
 
+## Edifici dalle foto (Piazza Marconi)
+
+Foto del committente del 22/11/2026, ore 12:02–12:04 (dal nome dei file `PXL_…`). Le copie caricate in chat non avevano più i dati EXIF (GPS e bussola tolti dal ridimensionamento), quindi gli edifici sono stati individuati dal contenuto delle foto incrociato con OSM:
+
+| Foto | Elemento | Ancora OSM | Edificio |
+|---|---|---|---|
+| 1 | Palazzo con negozi, pensilina e bar "Alice Caffè" | POI bar "Alice" | #337, lato est verso la piazza |
+| 5 | Intesa Sanpaolo, ocra con zoccolo in pietra | POI "Intesa Sanpaolo" | #857 |
+| 3 | Palazzina verde con piano terra a mosaico, ristorante Yang a fianco | POI ristorante, imbocco di via De Amicis | #1674 |
+| 4 | Edificio in cemento a portico dietro la fontana | POI fountain | #1148 |
+| 4 | Fontana ottagonale con sfera nera su isola di ghiaia bianca | POI fountain | arredo |
+| 3, 5 | Monumento "Moglia" (2012) su isola di ghiaia | baricentro dei nodi di via De Amicis | arredo |
+
+La foto 2 (viale alberato con lampioni) mostra soprattutto la strada: è servita come riferimento ma non contiene un edificio da rifare.
+
+Dalle foto vengono colori, piani, finestre, piano terra, tetto, pensiline e insegne; altezze corrette a mano (es. Alice 13,2 m invece di 9,5). Le sagome e le collisioni restano quelle OSM. Codice in `src/fotorilievi.js`.
+
 ## Verifica
 
 Al 22/11/2026:
@@ -215,3 +232,4 @@ Al 22/11/2026:
 4. **Ampliamento mappa**: le officine OSM più vicine (Falcin, Fabbricese) sono fuori dal riquadro attuale; per includerle va allargato il bbox, con aumento di peso e tempi di build.
 5. **Motore**: prova comparativa fatta con lo stesso GLB in Three.js e Godot 4 (Unity non misurato). Risultati in `docs/ENGINE-SPIKE.md`: la mappa si carica in pochi millisecondi ovunque, quindi il cambio motore si giustifica solo per editor e sistemi integrati, non per il caricamento. Decisione attuale: restare su Three.js finché il gioco è web e single-file.
 6. **Fisica vera**: se l'arcade attuale non basta, valutare Rapier (WASM) per rigid body, sospensioni e ribaltamenti. Costo: riscrittura della guida e dei pedoni, più ~1,5 MB di wasm.
+7. **Posizioni esatte dalle foto**: con gli originali (EXIF con GPS e direzione) si possono verificare i punti di ripresa e affinare monumento e fontana.

@@ -19,6 +19,8 @@ Un mini open world 3D in terza persona, nel browser, ambientato nelle vie vere d
 - **Officina Gasparini**: vernice, elaborazione motore e riparazioni; i luoghi delle interazioni vengono da OpenStreetMap.
 - **Stunt jump e collezionabili**: cinque rampe in paese e 20 panini nascosti, molti dei quali nei negozi OSM reali.
 - **Telefono, trucchi, giorno/notte, obiettivi**: contatti utili, trucchi digitati, ciclo solare e dieci obiettivi.
+- **Piazza Marconi dalle foto**: bar Alice con la pensilina e i negozi, Intesa Sanpaolo ocra con lo zoccolo in pietra e la terrazza, palazzina verde col piano terra a mosaico, edificio in cemento a portico, fontana con la sfera nera e monumento "Moglia" sull'isola di via De Amicis. Rifatti su foto del 22/11/2026 (`src/fotorilievi.js`); le sagome restano quelle di OpenStreetMap.
+- **Luce e meteo reali**: in modalità *Moglia adesso* il sole sta dove sta davvero in quel momento sopra Moglia (calcolo astronomico) e il cielo segue il meteo attuale: nuvole, pioggia, neve, temporali con lampi, nebbia e vento. In alternativa *Sempre giorno* tiene luce diurna e sole fisso, *Ciclo di gioco* fa passare un giorno in 12 minuti. La scelta resta memorizzata.
 - **Interfaccia**: minimappa con il nome della via, mappa completa del paese con i nomi delle strade, nebbia della Bassa, controlli touch per telefono; sui telefoni la schermata iniziale è compatta e il tasto "Gioca" è subito visibile.
 - **Lingua**: italiano predefinito, con tutti i testi in `src/lang/it.json`. Esiste una bozza dialettale (`src/lang/mogliese.json`, attivabile con `?lang=mogliese`) da correggere con un parlante di Moglia. I nomi dei luoghi vengono da OSM e restano nella forma originale, così come la nota di licenza.
 
@@ -40,8 +42,9 @@ All'avvio hai una berlina dorata davanti a te: premi `E` per salire e partire su
 | `H` | clacson |
 | `R` | rimetti l'auto in strada |
 | `Q` / `Z` | stazione radio successiva / precedente (in auto) |
-| `K` | telefono (taxi, fornaio, polizia, meteo, statistiche) |
-| `T` | avanza di due ore |
+| `K` | telefono (taxi, fornaio, polizia, meteo e luce, statistiche) |
+| `L` | luce: Moglia adesso → sempre giorno → ciclo di gioco |
+| `T` | avanza di due ore (passa al ciclo di gioco) |
 | `M` | mappa del paese (rotella per lo zoom, trascina per spostarti) |
 | `C` | cambia distanza della telecamera |
 | `N` | nebbia |
@@ -95,6 +98,8 @@ src/
   landmarks.js          edifici modellati a mano (Panificio Ada, Municipio)
   entities.js           modelli low-poly di veicoli e persone
   util.js               geometria, texture procedurali, griglia spaziale
+  fotorilievi.js        edifici e arredi di Piazza Marconi ricostruiti dalle foto
+  sky.js                posizione reale del sole e meteo attuale (Open-Meteo)
   index.template.html   pagina, HUD e stili (testi via data-i18n)
   lang/it.json          tutti i testi di gioco, in italiano (predefinito)
   lang/mogliese.json    bozza dialettale, attivabile con ?lang=mogliese
@@ -121,4 +126,5 @@ Il workflow `.github/workflows/pages.yml`, a ogni push su `main`, compila il gio
 - **Codice**: MIT, vedi [LICENSE](LICENSE).
 - **Dati cartografici** (`data/`): © OpenStreetMap contributors, disponibili con licenza [Open Database License (ODbL)](https://opendatacommons.org/licenses/odbl/). `data/moglia.json` è un database derivato e resta sotto ODbL. Chi lo modifica e lo ridistribuisce deve mantenere l'attribuzione e la stessa licenza.
 - Le altezze degli edifici, quando OSM non le riporta, e le facciate generiche sono stime generate dal codice e non descrivono gli edifici reali.
+- **Meteo**: dati di [Open-Meteo.com](https://open-meteo.com), licenza [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/). Il servizio è gratuito e senza chiave per uso non commerciale; se non risponde il gioco usa solo il sole reale con cielo sereno.
 - [Three.js](https://threejs.org) è distribuito con licenza MIT.

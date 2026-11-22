@@ -3,6 +3,8 @@ import { buildWorld } from './world.js';
 import { makeVehicle, makePerson, animatePerson, speechBubble, CAR_COLORS } from './entities.js';
 import { rng, canvasTex, makeLabel } from './util.js';
 import { prepareLandmarks, buildLandmarks, prepareMunicipio, buildMunicipio } from './landmarks.js';
+import { prepareFotorilievi, buildFotorilievi } from './fotorilievi.js';
+import { sunPosition, sunVector, mogliaHours, fetchWeather } from './sky.js';
 import LANG_IT from './lang/it.json';
 import LANG_MOG from './lang/mogliese.json';
 
@@ -66,10 +68,11 @@ const sunDir = new THREE.Vector3(-0.55, 0.75, 0.38).normalize();
 addEventListener('resize', () => { renderer.setSize(innerWidth, innerHeight); camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix(); });
 
 $('loadmsg').textContent = t('loading.world');
-const LM = prepareLandmarks(D), MU = prepareMunicipio(D);
+const LM = prepareLandmarks(D), MU = prepareMunicipio(D), FR = prepareFotorilievi(D);
 const W = buildWorld(D, scene);
 const ADA = buildLandmarks(D, W, scene, LM);
 const MUN = buildMunicipio(D, W, scene, MU);
+const FOTO = buildFotorilievi(D, W, scene, FR);
 for (const pl of W.places) {
   if (ADA && pl.name === 'Panificio Ada') { pl.rx = ADA.giver.x; pl.rz = ADA.giver.z; pl.label.position.set(ADA.labelPos[0], 8.6, ADA.labelPos[1]); }
   if (MUN && /^Municipio/.test(pl.name)) { pl.label.position.y = MUN.top; }
@@ -664,33 +667,163 @@ function radioSwitch(dir = 1) {
   const el = $('radio'); if (el) el.textContent = '📻 ' + STATIONS[station].name;
 }
 
-// ---- ciclo giorno/notte ----
+// ---- luce e meteo ----
+// Tre modalità (tasto L o telefono → Meteo):
+//   'reale'  ora, posizione del sole e meteo attuali di Moglia
+//   'giorno' sempre giorno, cielo sereno e sole alto
+//   'gioco'  ciclo giorno/notte accelerato (12 minuti per un giorno)
 let tod = 9.5, clockT = 0;
 const DAY_SECONDS = 720;
+const LIGHT_MODES = ['reale', 'giorno', 'gioco'];
+const LIGHT_NAMES = { reale: t('light.modes.reale'), giorno: t('light.modes.giorno'), gioco: t('light.modes.gioco') };
+let lightMode = 'reale';
+try { const m = localStorage.getItem('moglia_light'); if (LIGHT_MODES.includes(m)) lightMode = m; } catch (_) {}
+const LAT = D.lat0 || 44.9335, LON = D.lon0 || 10.9115;
+let weather = null, weatherState = 'idle', weatherT = -1e9; // weatherState: idle | loading | ok | error
+const WEATHER_EVERY = 600; // secondi tra un aggiornamento e l'altro
 const skyNow = new THREE.Color('#a9cbe6');
 const SKY_KEYS = [[0, '#0b1424'], [5, '#182338'], [6.6, '#e89a63'], [8, '#a9cbe6'], [16.5, '#a9cbe6'], [18.4, '#e88a55'], [19.6, '#222c44'], [24, '#0b1424']].map(([h, c]) => [h, new THREE.Color(c)]);
-function skyAt(t) {
-  for (let i = 0; i < SKY_KEYS.length - 1; i++) {
-    const [h0, c0] = SKY_KEYS[i], [h1, c1] = SKY_KEYS[i + 1];
+// colore del cielo in funzione dell'altezza del sole (gradi), usato con la luce reale
+const SKY_ELEV = [[-90, '#0b1424'], [-12, '#0b1424'], [-5, '#222c44'], [0, '#c9785a'], [4, '#e89a63'], [12, '#a9cbe6'], [90, '#a9cbe6']].map(([h, c]) => [h, new THREE.Color(c)]);
+const OVERCAST_DAY = new THREE.Color('#9ba5ae'), OVERCAST_NIGHT = new THREE.Color('#151a22'), tmpC = new THREE.Color();
+function lerpKeys(keys, t) {
+  for (let i = 0; i < keys.length - 1; i++) {
+    const [h0, c0] = keys[i], [h1, c1] = keys[i + 1];
     if (t >= h0 && t <= h1) return skyNow.copy(c0).lerp(c1, (t - h0) / (h1 - h0));
   }
-  return skyNow.set('#0b1424');
+  return skyNow.copy(keys[keys.length - 1][1]);
+}
+function skyAt(t) { return lerpKeys(SKY_KEYS, t); }
+const sunAlt = { v: 0 };
+function realWeatherActive() { return lightMode === 'reale' && weather && weatherState === 'ok'; }
+function weatherFog() { return realWeatherActive() && (weather.kind === 'fog' || weather.visibility < 1500); }
+function setLightMode(m, quiet) {
+  lightMode = m;
+  try { localStorage.setItem('moglia_light', m); } catch (_) {}
+  if (m === 'reale') refreshWeather(true);
+  if (!quiet) toast(LIGHT_NAMES[m] + ' · ' + (m === 'reale' ? weatherText() : t('light.toast.' + m)), 2600);
+  if (phoneOpen && phoneView === 'meteo') renderMeteo();
+  renderLightPick();
+}
+function renderLightPick() {
+  const el = $('lightpick'); if (!el) return;
+  el.innerHTML = LIGHT_MODES.map(m => '<button data-m="' + m + '" class="' + (m === lightMode ? 'sel' : '') + '">' + LIGHT_NAMES[m] + '</button>').join('');
+  el.querySelectorAll('button').forEach(b => b.addEventListener('click', () => setLightMode(b.dataset.m, true)));
+}
+function weatherText() {
+  if (weatherState === 'loading' && !weather) return t('light.loading');
+  if (!weather) return t(weatherState === 'error' ? 'light.unavailable' : 'light.pending');
+  return weather.icon + ' ' + weather.label + (weather.temp != null ? ' · ' + Math.round(weather.temp) + '°C' : '');
+}
+async function refreshWeather(force) {
+  if (weatherState === 'loading') return;
+  if (!force && now - weatherT < WEATHER_EVERY) return;
+  weatherT = now; weatherState = 'loading';
+  try { weather = await fetchWeather(LAT, LON); weatherState = 'ok'; }
+  catch (_) { weatherState = 'error'; weatherT = now - WEATHER_EVERY + 60; } // riprova fra un minuto
+  if (phoneOpen && phoneView === 'meteo') renderMeteo();
 }
 function updateDayNight(dt) {
-  tod = (tod + dt * 24 / DAY_SECONDS) % 24;
-  const a = (tod - 6) / 12 * Math.PI, alt = Math.sin(a);
-  sunDir.set(Math.cos(a) * 0.8, Math.max(0.12, alt), 0.45).normalize();
-  const day = clamp(alt, 0, 1);
+  let day, elevDeg;
+  if (lightMode === 'gioco') {
+    tod = (tod + dt * 24 / DAY_SECONDS) % 24;
+    const a = (tod - 6) / 12 * Math.PI, alt = Math.sin(a);
+    sunDir.set(Math.cos(a) * 0.8, Math.max(0.12, alt), 0.45).normalize();
+    day = clamp(alt, 0, 1); skyAt(tod);
+  } else if (lightMode === 'giorno') {
+    tod = 11.5; sunVector(48 * Math.PI / 180, 155 * Math.PI / 180, sunDir);
+    day = 1; skyNow.set('#a9cbe6');
+  } else {
+    const d = new Date(); tod = mogliaHours(d);
+    const sp = sunPosition(d, LAT, LON); elevDeg = sp.alt * 180 / Math.PI;
+    sunVector(sp.alt, sp.az, sunDir);
+    // di notte la luce direzionale fa da chiaro di luna: resta sopra l'orizzonte
+    if (sunDir.y < 0.12) { sunDir.y = 0.12; sunDir.normalize(); }
+    // crepuscolo: luce che cala da +25° fino a 5° sotto l'orizzonte, poi notte
+    day = clamp((elevDeg + 5) / 30, 0, 1); day = day * day * (3 - 2 * day);
+    lerpKeys(SKY_ELEV, elevDeg);
+    refreshWeather(false);
+  }
+  sunAlt.v = day;
   sun.intensity = 0.06 + day * 1.95;
   sun.color.setHSL(0.11, 0.32 + (1 - day) * 0.3, 0.55 + day * 0.35);
   hemi.intensity = 0.25 + day * 0.85;
-  if (foggy) { sun.intensity *= 0.35; hemi.intensity = Math.max(hemi.intensity, 1.35); }
-  skyAt(tod);
+  if (realWeatherActive()) {
+    // nuvole: meno sole diretto, più luce diffusa, cielo grigio
+    const w = weather, wet = w.kind === 'rain' || w.kind === 'drizzle' || w.kind === 'storm' || w.kind === 'snow';
+    const cov = Math.max(w.clouds, wet ? 0.85 : 0, w.kind === 'fog' ? 1 : 0);
+    sun.intensity *= 1 - cov * 0.82;
+    hemi.intensity *= 1 + cov * 0.25 - (w.kind === 'storm' ? 0.35 : 0);
+    tmpC.copy(OVERCAST_NIGHT).lerp(OVERCAST_DAY, day * (w.kind === 'storm' ? 0.6 : 1));
+    skyNow.lerp(tmpC, cov * 0.85);
+    if (w.kind === 'snow') skyNow.lerp(tmpC.set('#c9ced4'), 0.3 * day);
+  }
+  if (foggy || weatherFog()) { sun.intensity *= 0.35; hemi.intensity = Math.max(hemi.intensity, 0.35 + day * 1.0); }
+  hemi.intensity += flashL * 3.5;
   if (now - clockT > 0.25) {
     clockT = now;
     const hh = Math.floor(tod), mm = Math.floor((tod % 1) * 60);
     const el = $('clock');
-    if (el) el.textContent = (tod < 6 || tod > 20 ? '🌙 ' : '☀️ ') + String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+    const night = lightMode === 'reale' ? elevDeg < -2 : (tod < 6 || tod > 20);
+    let icon = night ? '🌙' : '☀️';
+    if (realWeatherActive() && (!night || weather.kind !== 'clear')) icon = weather.icon;
+    let txt = icon + ' ' + String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+    if (lightMode === 'reale') txt += realWeatherActive() && weather.temp != null ? ' · ' + Math.round(weather.temp) + '°C' : '';
+    else txt += lightMode === 'giorno' ? ' · ' + t('light.clockAlways') : '';
+    if (el) el.textContent = txt;
+  }
+}
+
+// ---- pioggia, neve e lampi ----
+const PREC_N = 4000, PREC_BOX = 64, PREC_H = 36;
+const precPos = new Float32Array(PREC_N * 3), precSpd = new Float32Array(PREC_N);
+for (let i = 0; i < PREC_N; i++) { precPos[i * 3] = (R() - 0.5) * PREC_BOX; precPos[i * 3 + 1] = R() * PREC_H; precPos[i * 3 + 2] = (R() - 0.5) * PREC_BOX; precSpd[i] = 0.8 + R() * 0.4; }
+const rainGeo = new THREE.BufferGeometry(); rainGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(PREC_N * 6), 3));
+const rainMesh = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: '#c8d3de', transparent: true, opacity: 0.7, depthWrite: false }));
+const snowGeo = new THREE.BufferGeometry(); snowGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(PREC_N * 3), 3));
+const snowMesh = new THREE.Points(snowGeo, new THREE.PointsMaterial({ color: '#ffffff', size: 0.22, transparent: true, opacity: 0.9, depthWrite: false }));
+for (const m of [rainMesh, snowMesh]) { m.frustumCulled = false; m.visible = false; scene.add(m); }
+let flashL = 0, nextBolt = 6;
+function updatePrecip(dt) {
+  const w = realWeatherActive() ? weather : null;
+  const kind = w ? w.kind : 'clear';
+  const isRain = kind === 'rain' || kind === 'drizzle' || kind === 'storm', isSnow = kind === 'snow';
+  rainMesh.visible = isRain; snowMesh.visible = isSnow;
+  // lampi
+  flashL = Math.max(0, flashL - dt * 4);
+  if (kind === 'storm') { nextBolt -= dt; if (nextBolt <= 0) { flashL = 1; nextBolt = 5 + R() * 14; if (!muted && typeof beep === 'function') setTimeout(() => beep(48, 0.9, 'sawtooth', 0.05), 600 + R() * 1500); } }
+  if (!isRain && !isSnow) return;
+  // quantità di gocce in base ai millimetri/ora
+  const amount = kind === 'drizzle' ? 0.25 : clamp(0.3 + (w.precip || 0) / 6, 0.3, 1);
+  const n = Math.floor(PREC_N * (kind === 'storm' ? 1 : amount));
+  const cx = camera.position.x, cy = camera.position.y, cz = camera.position.z;
+  // vento: direzione di provenienza in gradi → spinta verso la direzione opposta
+  const wr = (w.windDir || 0) * Math.PI / 180, ws = Math.min(12, (w.wind || 0) / 3.6);
+  const wx = -Math.sin(wr) * ws, wz = Math.cos(wr) * ws;
+  const fall = isSnow ? 1.6 : kind === 'drizzle' ? 9 : 22;
+  const half = PREC_BOX / 2, base = Math.max(0, cy - PREC_H * 0.45);
+  if (isRain) {
+    const a = rainGeo.attributes.position.array, k = 0.06;
+    for (let i = 0; i < n; i++) {
+      let x = precPos[i * 3], y = precPos[i * 3 + 1], z = precPos[i * 3 + 2];
+      const v = fall * precSpd[i]; y -= v * dt; x += wx * dt; z += wz * dt;
+      if (y < 0) { y += PREC_H; x = (R() - 0.5) * PREC_BOX; z = (R() - 0.5) * PREC_BOX; }
+      precPos[i * 3] = x; precPos[i * 3 + 1] = y; precPos[i * 3 + 2] = z;
+      // posizione nel mondo: scatola che segue la telecamera, con avvolgimento
+      const X = cx + ((((x + half) % PREC_BOX) + PREC_BOX) % PREC_BOX) - half, Z = cz + ((((z + half) % PREC_BOX) + PREC_BOX) % PREC_BOX) - half, Y = base + y;
+      const o = i * 6; a[o] = X; a[o + 1] = Y; a[o + 2] = Z; a[o + 3] = X - wx * k; a[o + 4] = Y + v * k; a[o + 5] = Z - wz * k;
+    }
+    rainGeo.setDrawRange(0, n * 2); rainGeo.attributes.position.needsUpdate = true;
+  } else {
+    const a = snowGeo.attributes.position.array;
+    for (let i = 0; i < n; i++) {
+      let x = precPos[i * 3], y = precPos[i * 3 + 1], z = precPos[i * 3 + 2];
+      y -= fall * precSpd[i] * dt; x += (wx * 0.5 + Math.sin(now * 1.3 + i) * 0.6) * dt; z += (wz * 0.5 + Math.cos(now * 1.1 + i) * 0.6) * dt;
+      if (y < 0) { y += PREC_H; x = (R() - 0.5) * PREC_BOX; z = (R() - 0.5) * PREC_BOX; }
+      precPos[i * 3] = x; precPos[i * 3 + 1] = y; precPos[i * 3 + 2] = z;
+      a[i * 3] = cx + ((((x + half) % PREC_BOX) + PREC_BOX) % PREC_BOX) - half; a[i * 3 + 1] = base + y; a[i * 3 + 2] = cz + ((((z + half) % PREC_BOX) + PREC_BOX) % PREC_BOX) - half;
+    }
+    snowGeo.setDrawRange(0, n); snowGeo.attributes.position.needsUpdate = true;
   }
 }
 
@@ -931,8 +1064,8 @@ const CHEATS = [
   { code: 'SALUTE', msg: t('cheats.health'), fn: () => { hp = 100; armor = 100; } },
   { code: 'LIBERTA', msg: t('cheats.police'), fn: () => clearWanted() },
   { code: 'TURBO', msg: t('cheats.motor'), fn: () => { if (P.car) tuneCar(P.car, 3); else toast(t('cheats.needCar'), 1500); } },
-  { code: 'SOLE', msg: t('cheats.morning'), fn: () => { tod = 10; } },
-  { code: 'NOTTE', msg: t('cheats.night'), fn: () => { tod = 23; } },
+  { code: 'SOLE', msg: t('cheats.morning'), fn: () => { setGameTime(10); } },
+  { code: 'NOTTE', msg: t('cheats.night'), fn: () => { setGameTime(23); } },
 ];
 function keyCheat(k) {
   if (!/^[a-z]$/i.test(k)) return;
@@ -947,8 +1080,24 @@ function keyCheat(k) {
 }
 
 // ---- telefono ----
-let phoneOpen = false;
+let phoneOpen = false, phoneView = 'main';
+function setGameTime(t) { if (lightMode !== 'gioco') { lightMode = 'gioco'; try { localStorage.setItem('moglia_light', 'gioco'); } catch (_) {} } tod = t; }
+function renderMeteo() {
+  const el = $('phoneBody'); if (!el) return;
+  const b = (m) => '<button class="pbtn lm' + (lightMode === m ? ' sel' : '') + '" data-m="' + m + '">' + LIGHT_NAMES[m] + '<small>' + t('light.sub.' + m) + '</small></button>';
+  const det = weather ? weather.icon + ' <b>' + weather.label + '</b>' + (weather.temp != null ? ' · ' + Math.round(weather.temp) + '°C' : '') +
+    ' · ' + t('light.clouds', { pct: Math.round(weather.clouds * 100) }) + (weather.precip ? ' · ' + weather.precip + ' mm' : '') + ' · ' + t('light.wind', { kmh: Math.round(weather.wind) })
+    : t(weatherState === 'loading' ? 'light.panelLoading' : weatherState === 'error' ? 'light.panelError' : 'light.panelIdle');
+  el.innerHTML = '<div class="pstats"><b>' + t('light.panelTitle') + '</b><br>' + det + '</div>' +
+    '<div class="prow">' + b('reale') + b('giorno') + b('gioco') + '</div>' +
+    '<div class="prow"><button class="pbtn" id="pFog">' + t(foggy ? 'light.fogOff' : 'light.fogOn') + '</button>' +
+    '<button class="pbtn" id="pWx">' + t('light.refresh') + '</button></div><small style="opacity:.55">' + t('light.credit') + '</small>';
+  el.querySelectorAll('.lm').forEach(x => x.addEventListener('click', () => setLightMode(x.dataset.m)));
+  const f = $('pFog'); if (f) f.addEventListener('click', () => { foggy = !foggy; toast(t(foggy ? 'fog.on' : 'fog.off'), 2000); renderMeteo(); });
+  const r = $('pWx'); if (r) r.addEventListener('click', () => { if (lightMode !== 'reale') setLightMode('reale'); else refreshWeather(true); renderMeteo(); });
+}
 function renderPhone() {
+  phoneView = 'main';
   const list = ACHIEVEMENTS.map(a => '<li class="' + (a.got ? 'on' : '') + '">' + (a.got ? '✅' : '⬜') + ' <b>' + a.name + '</b> — ' + a.desc + '</li>').join('');
   const el = $('phoneBody');
   if (!el) return;
@@ -1209,10 +1358,11 @@ function onKey(code) {
   if (code === 'KeyQ') radioSwitch(1);
   if (code === 'KeyZ') radioSwitch(-1);
   if (code === 'KeyK') openPhone();
-  if (code === 'KeyT') { tod = (tod + 2) % 24; toast(t('time.jump', { hour: String(Math.floor(tod)).padStart(2, '0') }), 1200); }
+  if (code === 'KeyT') { setGameTime((tod + 2) % 24); toast(t('time.jump', { hour: String(Math.floor(tod)).padStart(2, '0') }), 1200); }
   if (code === 'KeyM') { bigMap = !bigMap; big.style.display = bigMap ? 'block' : 'none'; if (bigMap) { bigCx = P.x; bigCz = P.z; bigZoom = 1.6; drawBigMap(); if (document.exitPointerLock) document.exitPointerLock(); } }
   if (bigMap && (code === 'Equal' || code === 'NumpadAdd')) { bigZoom = Math.min(8, bigZoom * 1.2); drawBigMap(); }
   if (bigMap && (code === 'Minus' || code === 'NumpadSubtract')) { bigZoom = Math.max(0.6, bigZoom / 1.2); drawBigMap(); }
+  if (code === 'KeyL') setLightMode(LIGHT_MODES[(LIGHT_MODES.indexOf(lightMode) + 1) % LIGHT_MODES.length]);
   if (code === 'KeyN') { foggy = !foggy; toast(t(foggy ? 'fog.on' : 'fog.off')); }
   if (code === 'KeyC') camDistIdx = (camDistIdx + 1) % 3;
   if (code === 'KeyH' && P.car) { horn(); for (const p of peds) if (!p.down && Math.hypot(p.x - P.x, p.z - P.z) < 18 && R() < 0.5) say(p, SHOUTS_DODGE[Math.floor(R() * SHOUTS_DODGE.length)]); }
@@ -1634,11 +1784,18 @@ function loop(time) {
 
   // ciclo giorno/notte, sole e ombre
   updateDayNight(dt);
+  updatePrecip(dt);
   sun.position.set(P.x + sunDir.x * 250, sunDir.y * 250, P.z + sunDir.z * 250); sun.target.position.set(P.x, 0, P.z);
-  // fog
-  const fogNear = foggy ? 6 : 220, fogFar = foggy ? 120 : 1500;
+  // nebbia: manuale (N) o reale dal meteo; con pioggia e neve la visibilità cala
+  const fogOn = foggy || weatherFog();
+  let fogNear = fogOn ? 6 : 220, fogFar = fogOn ? 120 : 1500;
+  if (!fogOn && realWeatherActive()) {
+    const k = weather.kind;
+    if (k === 'rain' || k === 'storm') { fogNear = 60; fogFar = 520; } else if (k === 'snow') { fogNear = 30; fogFar = 320; } else if (k === 'drizzle') { fogNear = 120; fogFar = 900; }
+    fogFar = Math.min(fogFar, Math.max(160, weather.visibility));
+  }
   scene.fog.near += (fogNear - scene.fog.near) * Math.min(1, dt * 1.5); scene.fog.far += (fogFar - scene.fog.far) * Math.min(1, dt * 1.5);
-  const fc = foggy ? FOG : skyNow; scene.fog.color.lerp(fc, Math.min(1, dt * 1.5)); scene.background.copy(scene.fog.color);
+  const fc = fogOn ? (realWeatherActive() || lightMode !== 'gioco' ? FOG.clone().lerp(skyNow, 0.25).multiplyScalar(0.35 + sunAlt.v * 0.65) : FOG) : skyNow; scene.fog.color.lerp(fc, Math.min(1, dt * 1.5)); scene.background.copy(scene.fog.color);
 
   // audio
   if (engGain) {
@@ -1682,6 +1839,7 @@ function loop(time) {
 let idleA = 0;
 function idleCam(dt) {
   idleA += dt * 0.06; const r = 260;
+  updateDayNight(dt); updatePrecip(dt); scene.fog.color.copy(foggy || weatherFog() ? FOG : skyNow); scene.background.copy(scene.fog.color);
   camera.position.set(P.x + Math.cos(idleA) * r, 140, P.z + Math.sin(idleA) * r); camera.lookAt(P.x, 0, P.z);
   sun.position.set(P.x + sunDir.x * 250, sunDir.y * 250, P.z + sunDir.z * 250); sun.target.position.set(P.x, 0, P.z);
   player.position.set(P.x, 0, P.z);
@@ -1708,13 +1866,15 @@ function idleCam(dt) {
   on('pPane', () => startMissionById('pane'));
   on('pGiro', () => startMissionById('giro'));
   on('pPolice', bribe);
-  on('pMeteo', () => { foggy = !foggy; toast(t(foggy ? 'fog.on' : 'fog.off'), 2000); });
+  on('pMeteo', () => { phoneView = 'meteo'; renderMeteo(); });
   on('pClose', closePhone);
 }
 addEventListener('keydown', (e) => { if (started && !garageOpen && !phoneOpen) keyCheat(e.key); });
 
 $('loading').style.display = 'none';
 $('intro').style.display = 'flex';
+renderLightPick();
+if (lightMode === 'reale') refreshWeather(true);
 $('play').addEventListener('click', () => {
   started = true; $('intro').style.display = 'none'; $('hud').style.display = 'block'; initAudio();
   if (AC && AC.state === 'suspended') AC.resume();
@@ -1722,6 +1882,7 @@ $('play').addEventListener('click', () => {
   maxHp = c.maxHp; hp = maxHp; armor = 0;
   if (c.bonus) addMoney(c.bonus);
   camYaw = MUN ? MUN.faceYaw : Math.PI; toast(t('intro.welcome', { name: c.name }), 5000);
+  if (lightMode === 'reale') setTimeout(() => toast(t('light.welcome', { weather: weatherText() }), 3500), 5200);
   if (!isTouch) { try { const p = canvas.requestPointerLock(); if (p && p.catch) p.catch(() => {}); } catch (_) {} }
 });
 requestAnimationFrame(loop);
@@ -1733,7 +1894,10 @@ window.__game = {
   stats, wanted, cops, panini, stunts, pickups, garage, ACHIEVEMENTS, STATIONS, CHARACTERS, selectCharacter,
   damage: damagePlayer, damageCar, repairCar, crime: setWanted, clearWanted, addMoney, tuneCar, paintCar, radioSwitch,
   get hp() { return hp; }, get armor() { return armor; }, get maxHp() { return maxHp; }, get charIdx() { return charIdx; }, get money() { return money; },
-  get tod() { return tod; }, setTod: (t) => { tod = t; }, get sunIntensity() { return sun.intensity; },
+  FOTO,
+  get tod() { return tod; }, setTod: (t) => setGameTime(t), get sunIntensity() { return sun.intensity; },
+  get lightMode() { return lightMode; }, setLightMode, get weather() { return weather; }, get weatherState() { return weatherState; },
+  setWeather: (w) => { weather = w; weatherState = w ? 'ok' : 'idle'; weatherT = now; }, get sunDir() { return sunDir; }, get rainOn() { return rainMesh.visible; },
   get starterCar() { return starterCar; },
   get station() { return station; }, get phoneOpen() { return phoneOpen; }, get garageOpen() { return garageOpen; },
   openGarage, closeGarage, openPhone, closePhone,

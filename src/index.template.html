@@ -33,6 +33,7 @@
   @media (max-width:700px){.chars{grid-template-columns:repeat(2,1fr)}}
   .keys{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:14px;margin:14px 0 20px}
   kbd{display:inline-block;min-width:24px;padding:2px 7px;border-radius:6px;background:#2c3440;border:1px solid #4a5464;border-bottom-width:3px;font:600 12px ui-monospace,monospace;text-align:center;color:#fff}
+  .lightpick{display:flex;gap:8px;margin:0 0 10px}.lightpick button{flex:1;padding:8px 6px;border-radius:10px;border:1px solid rgba(255,255,255,.2);background:rgba(35,43,54,.85);color:#fff;font-weight:700;font-size:13px;cursor:pointer}.lightpick button.sel{background:#2e86c1;border-color:#7ad0ff}
   #play{width:100%;padding:14px;border:0;border-radius:12px;background:#ffb020;color:#1a1200;font-weight:800;font-size:18px;cursor:pointer}
   #play:hover{filter:brightness(1.07)}
   .missions{font-size:13px;opacity:.85;line-height:1.5}
@@ -73,6 +74,8 @@
   .prow{display:flex;gap:10px;flex-wrap:wrap;margin:8px 0}
   .pbtn{flex:1;min-width:150px;padding:12px;border-radius:10px;border:1px solid rgba(255,255,255,.18);background:#2c3440;color:#fff;font-weight:700;font-size:14px;cursor:pointer}
   .pbtn:hover{background:#3a4554}
+  .pbtn small{display:block;font-weight:500;font-size:11px;opacity:.7;margin-top:3px}
+  .pbtn.sel{background:#ffb020;color:#1a1200;border-color:#ffb020}
   #pClose,#gClose{width:100%;margin-top:12px;padding:12px;border:0;border-radius:10px;background:#ffb020;color:#1a1200;font-weight:800;font-size:15px;cursor:pointer}
   .pstats{font-size:14px;line-height:1.6;background:rgba(255,255,255,.06);border-radius:10px;padding:10px 12px;margin-bottom:12px}
   .pach{list-style:none;padding:0;margin:0;font-size:13px;line-height:1.6}
@@ -111,6 +114,7 @@
     <span><kbd>M</kbd> <kbd>C</kbd></span><span data-i18n="intro.controls.map">mappa del paés · cambia la telecamera</span>
     <span><kbd>Q</kbd> <kbd>K</kbd></span><span data-i18n="intro.controls.radio">cambia stazion radio · telefon</span>
     <span><kbd>T</kbd> <kbd>N</kbd> <kbd>U</kbd></span><span data-i18n="intro.controls.time">avanza l'ora · nebbia de la Bassa · audio</span>
+    <span><kbd>L</kbd></span><span data-i18n="intro.controls.light">luce: Moglia adesso · sempre giorno · ciclo di gioco</span>
   </div>
   <div class="missions">
     <div><span class="dot" style="background:#ffb020"></span><b>Panificio Ada</b>: <span data-i18n="intro.missions.pane">consegne del pan a temp</span></div>
@@ -122,6 +126,7 @@
   </div>
   <p class="cheatsline" style="font-size:12px;opacity:.6;margin:12px 0 0"><span data-i18n="intro.cheats">Truchi: scriv</span> <b>PANE</b>, <b>SALUTE</b>, <b>LIBERTA</b>, <b>TURBO</b>, <b>SOLE</b>, <b>NOTTE</b></p>
   <div style="height:18px"></div>
+  <div class="lightpick" id="lightpick"></div>
   <button id="play" data-i18n="intro.play">Zöga</button>
   <div class="credit" data-i18n="intro.credit">Strade, edifici e luoghi: © OpenStreetMap contributors, licenza ODbL. Facciate e altezze generate dove mancano i dati.</div>
 </div></div>
@@ -167,7 +172,7 @@
   <button class="contact" id="pPane">🥖 <span><b>Panificio Ada</b><small data-i18n="phone.contacts.pane">Na növa consegna del pan</small></span></button>
   <button class="contact" id="pGiro">🏁 <span><b>Giro di Moglia</b><small data-i18n="phone.contacts.giro">Gara a tape per el paés</small></span></button>
   <button class="contact" id="pPolice">🚓 <span><b>Polizia Locale</b><small data-i18n="phone.contacts.police">Paga la multa e mét a zéro el ricercà</small></span></button>
-  <button class="contact" id="pMeteo">🌫️ <span><b>Meteo Bassa</b><small data-i18n="phone.contacts.meteo">Nebbia sì o nebbia no</small></span></button>
+  <button class="contact" id="pMeteo">🌦️ <span><b data-i18n="phone.meteoName">Meteo e luce</b><small data-i18n="phone.contacts.meteo">Nebbia sì o nebbia no</small></span></button>
   <div id="phoneBody" style="margin-top:14px"></div>
   <button id="pClose" data-i18n="phone.close">Sàra (K)</button>
 </div>

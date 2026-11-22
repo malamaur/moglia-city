@@ -1,6 +1,6 @@
 {
   "name": "moglia-city",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Mini open world 3D nel browser ambientato nelle vie reali di Moglia (MN), costruito con Three.js e dati OpenStreetMap",
   "private": true,
   "type": "module",
