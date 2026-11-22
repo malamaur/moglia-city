@@ -19,7 +19,7 @@ Un mini open world 3D in terza persona, nel browser, ambientato nelle vie vere d
 - **Officina Gasparini**: vernice, elaborazione motore e riparazioni; i luoghi delle interazioni vengono da OpenStreetMap.
 - **Stunt jump e collezionabili**: cinque rampe in paese e 20 panini nascosti, molti dei quali nei negozi OSM reali.
 - **Telefono, trucchi, giorno/notte, obiettivi**: contatti utili, trucchi digitati, ciclo solare e dieci obiettivi.
-- **Interfaccia**: minimappa con il nome della via, mappa completa del paese con i nomi delle strade, nebbia della Bassa, controlli touch per telefono; la schermata iniziale scorre sui telefoni piccoli.
+- **Interfaccia**: minimappa con il nome della via, mappa completa del paese con i nomi delle strade, nebbia della Bassa, controlli touch per telefono; sui telefoni la schermata iniziale è compatta e il tasto "Gioca" è subito visibile.
 - **Lingua**: italiano predefinito, con tutti i testi in `src/lang/it.json`. Esiste una bozza dialettale (`src/lang/mogliese.json`, attivabile con `?lang=mogliese`) da correggere con un parlante di Moglia. I nomi dei luoghi vengono da OSM e restano nella forma originale, così come la nota di licenza.
 
 | Municipio | Mappa del paese |

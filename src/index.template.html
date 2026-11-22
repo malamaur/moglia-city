@@ -6,14 +6,17 @@
 <title>Moglia City – mini open world</title>
 <style>
   *{box-sizing:border-box}
-  html,body{margin:0;height:100%;overflow:hidden;background:#111;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#fff;user-select:none;-webkit-user-select:none;touch-action:none}
+  html,body{margin:0;height:100%;overflow:hidden;background:#111;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;color:#fff;user-select:none;-webkit-user-select:none;touch-action:manipulation;overscroll-behavior:none}
+  #game canvas,#hud{touch-action:none}
   #game canvas{display:block}
   #loading,#intro{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;flex-direction:column;z-index:20}
   #loading{background:#1b2430;font-size:18px;letter-spacing:.02em}
   #intro{display:none;background:linear-gradient(180deg,rgba(10,14,20,.25),rgba(10,14,20,.8))}
   #intro{overflow-y:auto;overscroll-behavior:contain;justify-content:flex-start;padding:16px 0;touch-action:pan-y;-webkit-overflow-scrolling:touch}
   #intro .card{margin:auto;flex:none}
-  body.touch .keys{display:none}
+  body.touch .keys,body.touch .missions,body.touch .credit,body.touch .cheatsline{display:none}
+  body.touch .card{padding:20px 22px}
+  body.touch #play{margin-top:6px}
   .card{background:rgba(18,22,28,.88);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:28px 32px;max-width:560px;width:calc(100% - 32px);box-shadow:0 20px 60px rgba(0,0,0,.5)}
   h1{margin:0 0 2px;font-size:40px;line-height:1;letter-spacing:-.02em;font-weight:900}
   h1 span{color:#ffb020}
@@ -117,7 +120,7 @@
     <div><span class="dot" style="background:#2ec4b6"></span><b>Officina Gasparini</b>: <span data-i18n="intro.missions.garage">vernis e motor per la tò auto</span></div>
     <div><span class="dot" style="background:#e8b64c"></span><span data-i18n="intro.missions.panini">20 panìn scondù in paés e 5 salt acrobàtic</span></div>
   </div>
-  <p style="font-size:12px;opacity:.6;margin:12px 0 0"><span data-i18n="intro.cheats">Truchi: scriv</span> <b>PANE</b>, <b>SALUTE</b>, <b>LIBERTA</b>, <b>TURBO</b>, <b>SOLE</b>, <b>NOTTE</b></p>
+  <p class="cheatsline" style="font-size:12px;opacity:.6;margin:12px 0 0"><span data-i18n="intro.cheats">Truchi: scriv</span> <b>PANE</b>, <b>SALUTE</b>, <b>LIBERTA</b>, <b>TURBO</b>, <b>SOLE</b>, <b>NOTTE</b></p>
   <div style="height:18px"></div>
   <button id="play" data-i18n="intro.play">Zöga</button>
   <div class="credit" data-i18n="intro.credit">Strade, edifici e luoghi: © OpenStreetMap contributors, licenza ODbL. Facciate e altezze generate dove mancano i dati.</div>

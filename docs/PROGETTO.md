@@ -128,12 +128,12 @@ Il 22/11/2026 Federico ha segnalato che da telefono il gioco non si avviava. Cau
 
 Correzioni:
 
-- `#intro` è ora scorrevole (`overflow-y:auto`, `touch-action:pan-y`, `overscroll-behavior:contain`) con la card centrata quando c'è spazio e scrollabile quando non c'è.
-- su dispositivi touch la lista dei comandi da tastiera è nascosta (`body.touch .keys{display:none}`), così la schermata resta corta.
+- **touch-action**: `html,body` non ha più `touch-action:none` (bloccava anche lo scroll di `#intro` perché il valore si interseca con gli antenati). Ora `html,body` usa `manipulation`, `#game canvas` e `#hud` usano `none` (per non muovere la pagina durante il gioco) e `#intro` usa `pan-y` con `overflow-y:auto` e `overscroll-behavior:contain`.
+- **layout compatto su touch**: su `body.touch` sono nascosti i comandi da tastiera, l'elenco missioni, la riga trucchi e il credit. Restano titolo, scelta omino e "Gioca": il pulsante è subito visibile senza scorrere.
 - fallback del renderer: se WebGL con `logarithmicDepthBuffer` non parte, si riprova senza; se WebGL manca del tutto compare un messaggio in `#loadmsg`.
 - fallback per `CanvasRenderingContext2D.roundRect` (Safari precedenti), usato dalle etichette.
 
-Verifica con Playwright su iPhone SE e iPhone 13 emulati: la schermata scorre, "Gioca" è cliccabile, l'HUD parte e il joystick touch sposta il personaggio (1,74 m in 1,5 s nel test). Nessun errore JavaScript.
+Verifica con Playwright su iPhone SE (568 px), viewport 320×568 e iPhone 13 emulati: "Gioca" è interamente nel viewport senza scroll (y 440–489 su 568), l'HUD parte, il joystick touch sposta il personaggio (1,74 m in 1,5 s) e non ci sono errori JavaScript.
 
 ## Fisica, incidenti e veicoli
 
