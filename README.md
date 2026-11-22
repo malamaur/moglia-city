@@ -19,7 +19,8 @@ Un mini open world 3D in terza persona, nel browser, ambientato nelle vie vere d
 - **Officina Gasparini**: vernice, elaborazione motore e riparazioni; i luoghi delle interazioni vengono da OpenStreetMap.
 - **Stunt jump e collezionabili**: cinque rampe in paese e 20 panini nascosti, molti dei quali nei negozi OSM reali.
 - **Telefono, trucchi, giorno/notte, obiettivi**: contatti utili, trucchi digitati, ciclo solare e dieci obiettivi.
-- **Piazza Marconi dalle foto**: bar Alice con la pensilina e i negozi, Intesa Sanpaolo ocra con lo zoccolo in pietra e la terrazza, palazzina verde col piano terra a mosaico, edificio in cemento a portico, fontana con la sfera nera e monumento "Moglia" sull'isola di via De Amicis. Rifatti su foto del 22/11/2026 (`src/fotorilievi.js`); le sagome restano quelle di OpenStreetMap.
+- **Auto e persone più realistiche**: carrozzerie arrotondate ricavate da un profilo laterale, abitacolo in vetro con montanti, passaruota, cerchi a razze, fari, targhe italiane e scarichi; nuova *compatta sportiva* grigia con tetto e cerchi neri, che è anche l'auto di partenza. Persone con ginocchia e gomiti articolati, teste tonde, capelli corti o lunghi, cappotti, sciarpe e gonne.
+- **Piazza Marconi e Municipio dalle foto**: Municipio con la facciata su via XX Settembre; bar Alice con la pensilina e i negozi, Intesa Sanpaolo ocra con lo zoccolo in pietra e la terrazza, palazzina verde col piano terra a mosaico, edificio in cemento a portico, fontana con la sfera nera e monumento "Moglia" sull'isola di via De Amicis. Rifatti su foto del 22/11/2026 (`src/fotorilievi.js`); le sagome restano quelle di OpenStreetMap.
 - **Luce e meteo reali**: in modalità *Moglia adesso* il sole sta dove sta davvero in quel momento sopra Moglia (calcolo astronomico) e il cielo segue il meteo attuale: nuvole, pioggia, neve, temporali con lampi, nebbia e vento. In alternativa *Sempre giorno* tiene luce diurna e sole fisso, *Ciclo di gioco* fa passare un giorno in 12 minuti. La scelta resta memorizzata.
 - **Interfaccia**: minimappa con il nome della via, mappa completa del paese con i nomi delle strade, nebbia della Bassa, controlli touch per telefono; sui telefoni la schermata iniziale è compatta e il tasto "Gioca" è subito visibile.
 - **Lingua**: italiano predefinito, con tutti i testi in `src/lang/it.json`. Esiste una bozza dialettale (`src/lang/mogliese.json`, attivabile con `?lang=mogliese`) da correggere con un parlante di Moglia. I nomi dei luoghi vengono da OSM e restano nella forma originale, così come la nota di licenza.
@@ -30,7 +31,7 @@ Un mini open world 3D in terza persona, nel browser, ambientato nelle vie vere d
 
 ## Comandi
 
-All'avvio hai una berlina dorata davanti a te: premi `E` per salire e partire subito.
+All'avvio hai una compatta sportiva grigia davanti a te: premi `E` per salire e partire subito.
 
 | Tasto | Azione |
 |---|---|

@@ -148,9 +148,9 @@ let muted = false;
 // ---------------- vehicles ----------------
 const vehicles = [];
 let starterCar = null, starterLabel = null;
-const TYPES = ['utilitaria', 'utilitaria', 'utilitaria', 'berlina', 'berlina', 'furgone', 'apecar', 'trattore', 'sportiva', 'camion', 'autobus', 'vigili'];
+const TYPES = ['utilitaria', 'utilitaria', 'utilitaria', 'berlina', 'berlina', 'compatta', 'furgone', 'apecar', 'trattore', 'sportiva', 'camion', 'autobus', 'vigili'];
 // massa indicativa in kg, usata per gli urti
-const MASS = { utilitaria: 950, berlina: 1350, sportiva: 1200, furgone: 2300, apecar: 450, trattore: 3200, vigili: 1450, camion: 6500, autobus: 11000 };
+const MASS = { utilitaria: 950, berlina: 1350, sportiva: 1200, compatta: 1450, furgone: 2300, apecar: 450, trattore: 3200, vigili: 1450, camion: 6500, autobus: 11000 };
 function spawnVehicle(type, x, z, h) {
   const color = type === 'vigili' ? '#f4f6f7' : type === 'trattore' ? (R() < 0.5 ? '#2e7d32' : '#c0392b') : type === 'apecar' ? (R() < 0.5 ? '#2e86c1' : '#d4ac0d') : CAR_COLORS[Math.floor(R() * CAR_COLORS.length)];
   const vh = makeVehicle(type, color);
@@ -251,15 +251,15 @@ const SHOUTS_HONK = L.text.peds.honk;
 // Moglia Online: si sceglie l'"omino" prima di entrare in paese.
 const CHARACTERS = [
   { id: 'luca', name: 'Luca', tag: t('characters.luca.tag'), desc: t('characters.luca.desc'), shirt: '#1f6fb2', pants: '#2b2f38', hair: '#3a2a1c', skin: '#e9bf9b', speed: 1.15, maxHp: 100 },
-  { id: 'ada', name: 'Ada', tag: t('characters.ada.tag'), desc: t('characters.ada.desc'), shirt: '#c0392b', pants: '#5d6d7e', hair: '#2b1d14', skin: '#f1c7a5', speed: 1.0, maxHp: 140 },
+  { id: 'ada', name: 'Ada', tag: t('characters.ada.tag'), desc: t('characters.ada.desc'), shirt: '#c0392b', pants: '#5d6d7e', hair: '#2b1d14', skin: '#f1c7a5', longHair: true, speed: 1.0, maxHp: 140 },
   { id: 'gigi', name: 'Gigi', tag: t('characters.gigi.tag'), desc: t('characters.gigi.desc'), shirt: '#d35400', pants: '#1b2631', hair: '#a87a43', skin: '#e0ac85', speed: 1.0, maxHp: 110, discount: 0.8 },
-  { id: 'sara', name: 'Sara', tag: t('characters.sara.tag'), desc: t('characters.sara.desc'), shirt: '#34495e', pants: '#212f3c', hair: '#5a3b22', skin: '#f5d2b8', speed: 1.05, maxHp: 110, bonus: 200 },
+  { id: 'sara', name: 'Sara', tag: t('characters.sara.tag'), desc: t('characters.sara.desc'), shirt: '#34495e', pants: '#212f3c', hair: '#5a3b22', skin: '#f5d2b8', longHair: true, speed: 1.05, maxHp: 110, bonus: 200 },
 ];
 let charIdx = 0, player;
 function spawnPlayerMesh() {
   if (player) scene.remove(player);
   const c = CHARACTERS[charIdx];
-  player = makePerson(R, { shirt: c.shirt, pants: c.pants, hair: c.hair, skin: c.skin, scale: 1.0 });
+  player = makePerson(R, { shirt: c.shirt, pants: c.pants, hair: c.hair, skin: c.skin, longHair: !!c.longHair, coat: false, skirt: false, scale: 1.0 });
   scene.add(player);
   player.position.set(P.x, 0, P.z);
 }
@@ -309,8 +309,10 @@ function populate() {
       const v = W.nearestDriveVert(P.x, P.z); const e = W.adj[v][0];
       const off = 2.8; [x, z] = e ? laneTarget(v, e.to, off) : [P.x + 4, P.z];
     }
-    const car = spawnVehicle('berlina', x, z, P.h + Math.PI);
-    for (const m of car.mesh.userData.bodyMats || []) m.color.set('#ffb020');
+    // auto di partenza: compatta sportiva grigia con tetto e cerchi neri
+    const car = spawnVehicle('compatta', x, z, P.h + Math.PI);
+    for (const m of car.mesh.userData.bodyMats || []) m.color.set('#9a9e9f');
+    car.origColors = (car.mesh.userData.bodyMats || []).map((m) => m.color.getHex());
     const pos = { x: car.x, z: car.z }; W.collideCircle(pos, 1.4); car.x = pos.x; car.z = pos.z;
     car.mesh.position.set(car.x, 0, car.z);
     starterCar = car;
@@ -1894,7 +1896,7 @@ window.__game = {
   stats, wanted, cops, panini, stunts, pickups, garage, ACHIEVEMENTS, STATIONS, CHARACTERS, selectCharacter,
   damage: damagePlayer, damageCar, repairCar, crime: setWanted, clearWanted, addMoney, tuneCar, paintCar, radioSwitch,
   get hp() { return hp; }, get armor() { return armor; }, get maxHp() { return maxHp; }, get charIdx() { return charIdx; }, get money() { return money; },
-  FOTO,
+  FOTO, scene, makePerson, makeVehicle,
   get tod() { return tod; }, setTod: (t) => setGameTime(t), get sunIntensity() { return sun.intensity; },
   get lightMode() { return lightMode; }, setLightMode, get weather() { return weather; }, get weatherState() { return weatherState; },
   setWeather: (w) => { weather = w; weatherState = w ? 'ok' : 'idle'; weatherT = now; }, get sunDir() { return sunDir; }, get rainOn() { return rainMesh.visible; },

@@ -303,14 +303,19 @@ export function buildMunicipio(D, W, scene, prep) {
   const R = rng(5);
   const p = D.buildings[prep.bi].p;
   // main facade corners (left/right seen from the square) and depth, from the OSM outline
-  const left = [p[12], p[13]], right = [p[2], p[3]];
-  const dx = right[0] - left[0], dz = right[1] - left[1], Wd = Math.hypot(dx, dz);
-  const rx = dx / Wd, rz = dz / Wd, nx = -rz, nz = rx; // n: out of the facade
+  const left0 = [p[12], p[13]], right0 = [p[2], p[3]];
+  const dx = right0[0] - left0[0], dz = right0[1] - left0[1], Wd = Math.hypot(dx, dz);
+  const rx0 = dx / Wd, rz0 = dz / Wd, nx = -rz0, nz = rx0; // n: out of the facade
   // make sure n points away from the building centre
   let cx = 0, cz = 0; for (let k = 0; k < p.length; k += 2) { cx += p[k]; cz += p[k + 1]; } cx /= p.length / 2; cz /= p.length / 2;
-  const sgn = ((left[0] - cx) * nx + (left[1] - cz) * nz) > 0 ? 1 : -1;
-  const NX = nx * sgn, NZ = nz * sgn;
-  let depth = 0; for (let k = 0; k < p.length; k += 2) depth = Math.max(depth, -((p[k] - left[0]) * NX + (p[k + 1] - left[1]) * NZ));
+  const sgn = ((left0[0] - cx) * nx + (left0[1] - cz) * nz) > 0 ? 1 : -1;
+  const NX0 = nx * sgn, NZ0 = nz * sgn;
+  let depth = 0; for (let k = 0; k < p.length; k += 2) depth = Math.max(depth, -((p[k] - left0[0]) * NX0 + (p[k + 1] - left0[1]) * NZ0));
+  // la facciata principale dà su via XX Settembre (verificato dal committente):
+  // il modello è ruotato di 180° rispetto al lato ricavato dalla sagoma OSM
+  const FLIP = true;
+  const left = FLIP ? [left0[0] + rx0 * Wd - NX0 * depth, left0[1] + rz0 * Wd - NZ0 * depth] : left0;
+  const rx = FLIP ? -rx0 : rx0, rz = FLIP ? -rz0 : rz0, NX = FLIP ? -NX0 : NX0, NZ = FLIP ? -NZ0 : NZ0;
   const g = new THREE.Group(); g.position.set(left[0], 0, left[1]);
   // local X -> (rx,rz), local Z -> (NX,NZ)
   g.rotation.y = Math.atan2(NX, NZ) ; // maps +Z to (NX,NZ)

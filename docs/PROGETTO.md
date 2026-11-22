@@ -165,7 +165,7 @@ Limite dichiarato: resta una fisica custom arcade (cerchi di collisione, nessun 
 
 ## Mezzo di trasporto iniziale
 
-Alla partenza c'è sempre una berlina dorata a circa 4,5 metri davanti al giocatore, con l'etichetta "🚗 E per salire": serve a entrare subito in gioco senza cercare un'auto parcheggiata. Il mezzo è garantito anche se il punto davanti al giocatore è occupato (in quel caso viene spostato sul vertice stradale OSM più vicino). L'etichetta sparisce appena si sale su un veicolo.
+Alla partenza c'è sempre una compatta sportiva grigia (tetto e cerchi neri) a circa 4,5 metri davanti al giocatore, con l'etichetta "🚗 E per salire": serve a entrare subito in gioco senza cercare un'auto parcheggiata. Il mezzo è garantito anche se il punto davanti al giocatore è occupato (in quel caso viene spostato sul vertice stradale OSM più vicino). L'etichetta sparisce appena si sale su un veicolo.
 
 ## Comandi
 
@@ -211,6 +211,8 @@ Foto del committente del 22/11/2026, ore 12:02–12:04 (dal nome dei file `PXL_�
 | 4 | Edificio in cemento a portico dietro la fontana | POI fountain | #1148 |
 | 4 | Fontana ottagonale con sfera nera su isola di ghiaia bianca | POI fountain | arredo |
 | 3, 5 | Monumento "Moglia" (2012) su isola di ghiaia | baricentro dei nodi di via De Amicis | arredo |
+
+Municipio: la facciata principale dà su via XX Settembre (indicazione del committente). In `src/landmarks.js` il modello è ruotato di 180° rispetto al lato ricavato dalla sagoma OSM (costante `FLIP`).
 
 La foto 2 (viale alberato con lampioni) mostra soprattutto la strada: è servita come riferimento ma non contiene un edificio da rifare.
 

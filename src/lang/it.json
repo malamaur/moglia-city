@@ -55,6 +55,7 @@
     "vehicles": {
       "utilitaria": "Utilitaria",
       "berlina": "Berlina",
+      "compatta": "Compatta sportiva",
       "sportiva": "Sportiva",
       "furgone": "Furgone",
       "camion": "Camion",
