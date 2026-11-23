@@ -149,11 +149,15 @@ const hurt = await page.evaluate(() => { const g = window.__game; g.damage(30); 
 if (hurt.hp >= 100) await fail('la salute non scende dopo un danno');
 console.log('✓ salute e armatura');
 
-const found = await page.evaluate(() => {
-  const g = window.__game; const p = g.panini.find(q => !q.got);
-  if (!p) return false; g.P.x = p.x; g.P.z = p.z; return true;
+// sui server lenti un fotogramma può durare più di un secondo: si riprova finché il panino è preso
+const found = await page.evaluate(async () => {
+  const g = window.__game; const t0 = performance.now();
+  while (performance.now() - t0 < 30000 && g.stats.panini < 1) {
+    const p = g.panini.find(q => !q.got); if (!p) return false;
+    g.P.x = p.x; g.P.z = p.z; await new Promise(r => setTimeout(r, 400));
+  }
+  return true;
 });
-await page.waitForTimeout(900);
 const panini = await page.evaluate(() => window.__game.stats.panini);
 if (!found || panini < 1) await fail('collezionabile non raccolto');
 console.log('✓ panini collezionabili');
