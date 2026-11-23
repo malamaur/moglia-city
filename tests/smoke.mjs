@@ -57,7 +57,10 @@ if (!startCar || startCar.d > 12) await fail('nessun mezzo di trasporto davanti 
 console.log('✓ mezzo pronto davanti al giocatore:', startCar.type, Math.round(startCar.d) + ' m');
 
 const pos = () => page.evaluate(() => ({ x: window.__game.P.x, z: window.__game.P.z, car: !!window.__game.P.car }));
-if (await holdUntilMoved('KeyW', 1.5) < 1.5) await fail('il personaggio non cammina');
+// davanti al giocatore c'è l'auto di partenza e può passare il traffico: se avanti è bloccato si provano le altre direzioni
+let walked = 0;
+for (const k of ['KeyW', 'KeyS', 'KeyA', 'KeyD']) { walked = await holdUntilMoved(k, 1.5, 15000); if (walked >= 1.5) break; }
+if (walked < 1.5) await fail('il personaggio non cammina: ' + JSON.stringify(await page.evaluate(() => { const g = window.__game; return { x: g.P.x, z: g.P.z, car: !!g.P.car, fps: g.fps, near: g.vehicles.filter(v => Math.hypot(v.x - g.P.x, v.z - g.P.z) < 6).map(v => v.type) }; })));
 console.log('✓ si cammina');
 
 await page.evaluate(() => {
