@@ -128,7 +128,8 @@ console.log('✓ ciclo giorno/notte');
 
 // luce e meteo reali, poi "sempre giorno"
 const light = await page.evaluate(async () => {
-  const g = window.__game; const wait = async (cond) => { const t0 = performance.now(); while (performance.now() - t0 < 10000 && !cond()) await new Promise(r => setTimeout(r, 100)); };
+  const g = window.__game; // sui server di GitHub il gioco gira in rendering software, molto lento: attese generose
+  const wait = async (cond) => { const t0 = performance.now(); while (performance.now() - t0 < 60000 && !cond()) await new Promise(r => setTimeout(r, 200)); };
   g.setLightMode('reale', true); await wait(() => g.weatherState === 'ok' && g.rainOn);
   const real = { state: g.weatherState, label: g.weather && g.weather.label, rain: g.rainOn, clock: document.getElementById('clock').textContent };
   g.setLightMode('giorno', true); await wait(() => g.sunIntensity > 1.5 && !g.rainOn);

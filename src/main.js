@@ -681,7 +681,7 @@ const LIGHT_NAMES = { reale: t('light.modes.reale'), giorno: t('light.modes.gior
 let lightMode = 'reale';
 try { const m = localStorage.getItem('moglia_light'); if (LIGHT_MODES.includes(m)) lightMode = m; } catch (_) {}
 const LAT = D.lat0 || 44.9335, LON = D.lon0 || 10.9115;
-let weather = null, weatherState = 'idle', weatherT = -1e9; // weatherState: idle | loading | ok | error
+let weather = null, weatherState = 'idle', weatherT = -1e9, weatherLoading = false; // weatherState: idle | loading | ok | error
 const WEATHER_EVERY = 600; // secondi tra un aggiornamento e l'altro
 const skyNow = new THREE.Color('#a9cbe6');
 const SKY_KEYS = [[0, '#0b1424'], [5, '#182338'], [6.6, '#e89a63'], [8, '#a9cbe6'], [16.5, '#a9cbe6'], [18.4, '#e88a55'], [19.6, '#222c44'], [24, '#0b1424']].map(([h, c]) => [h, new THREE.Color(c)]);
@@ -697,7 +697,8 @@ function lerpKeys(keys, t) {
 }
 function skyAt(t) { return lerpKeys(SKY_KEYS, t); }
 const sunAlt = { v: 0 };
-function realWeatherActive() { return lightMode === 'reale' && weather && weatherState === 'ok'; }
+// l'ultimo meteo valido resta applicato anche mentre se ne scarica uno nuovo o se un aggiornamento fallisce
+function realWeatherActive() { return lightMode === 'reale' && !!weather; }
 function weatherFog() { return realWeatherActive() && (weather.kind === 'fog' || weather.visibility < 1500); }
 function setLightMode(m, quiet) {
   lightMode = m;
@@ -718,11 +719,12 @@ function weatherText() {
   return weather.icon + ' ' + weather.label + (weather.temp != null ? ' · ' + Math.round(weather.temp) + '°C' : '');
 }
 async function refreshWeather(force) {
-  if (weatherState === 'loading') return;
+  if (weatherLoading) return;
   if (!force && now - weatherT < WEATHER_EVERY) return;
-  weatherT = now; weatherState = 'loading';
+  weatherT = now; weatherLoading = true; if (!weather) weatherState = 'loading';
   try { weather = await fetchWeather(LAT, LON); weatherState = 'ok'; }
-  catch (_) { weatherState = 'error'; weatherT = now - WEATHER_EVERY + 60; } // riprova fra un minuto
+  catch (_) { if (!weather) weatherState = 'error'; weatherT = now - WEATHER_EVERY + 60; } // riprova fra un minuto
+  finally { weatherLoading = false; }
   if (phoneOpen && phoneView === 'meteo') renderMeteo();
 }
 function updateDayNight(dt) {
