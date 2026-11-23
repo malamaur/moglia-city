@@ -109,8 +109,11 @@ if (!(crash.after < crash.before) || crash.repaired !== 100 || !(crash.mass > 50
 console.log('✓ danni, massa e riparazione auto');
 
 await page.evaluate(() => window.__game.crime(2));
-await page.waitForTimeout(1500);
-const wanted = await page.evaluate(() => ({ lvl: window.__game.wanted.level, cops: window.__game.cops.length }));
+const wanted = await page.evaluate(async () => {
+  const g = window.__game, t0 = performance.now();
+  while (performance.now() - t0 < 30000 && !g.cops.length) await new Promise(r => setTimeout(r, 300));
+  return { lvl: g.wanted.level, cops: g.cops.length };
+});
 if (wanted.lvl < 2 || wanted.cops < 1) await fail('ricercato o polizia non attivi: ' + JSON.stringify(wanted));
 console.log('✓ ricercato e inseguimento');
 await page.evaluate(() => window.__game.clearWanted());

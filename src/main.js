@@ -194,11 +194,27 @@ function laneTarget(a, b, off) {
   return [vx(b) - dz / l * off, vz(b) + dx / l * off];
 }
 function laneOff(e) { const r = roadOf(e); return r.o ? 0 : Math.min(r.w / 4, 1.8); }
+// Ricerca di vertici stradali a una certa distanza dal giocatore. Con la mappa di tutto il
+// comune pescare a caso fra tutti i vertici va quasi sempre a vuoto: si usa una griglia da 100 m.
+function makeVertGrid(list) {
+  const g = new Map();
+  for (const v of list) { const k = Math.floor(vx(v) / 100) + ',' + Math.floor(vz(v) / 100); let a = g.get(k); if (!a) g.set(k, a = []); a.push(v); }
+  return g;
+}
+function vertsInRing(grid, minD, maxD) {
+  const out = [], c0 = Math.floor((P.x - maxD) / 100), c1 = Math.floor((P.x + maxD) / 100), r0 = Math.floor((P.z - maxD) / 100), r1 = Math.floor((P.z + maxD) / 100);
+  for (let cx = c0; cx <= c1; cx++) for (let cz = r0; cz <= r1; cz++) {
+    const a = grid.get(cx + ',' + cz); if (!a) continue;
+    for (const v of a) { const d = Math.hypot(vx(v) - P.x, vz(v) - P.z); if (d >= minD && d <= maxD) out.push(v); }
+  }
+  return out;
+}
+let driveGrid = null;
 function placeTraffic(car, minD, maxD) {
+  if (!driveGrid) driveGrid = makeVertGrid(W.driveVerts);
+  const cand = vertsInRing(driveGrid, minD, maxD); if (!cand.length) return false;
   for (let tries = 0; tries < 60; tries++) {
-    const v = W.driveVerts[Math.floor(R() * W.driveVerts.length)];
-    const d = Math.hypot(vx(v) - P.x, vz(v) - P.z);
-    if (d < minD || d > maxD) continue;
+    const v = cand[Math.floor(R() * cand.length)];
     const e = W.adj[v][Math.floor(R() * W.adj[v].length)];
     const t = car.type;
     if (t === 'trattore' && !['unclassified', 'tertiary', 'service', 'secondary'].includes(roadOf(e).t)) continue;
@@ -224,10 +240,12 @@ function spawnPed(mesh) {
   const p = { mesh: mesh || makePerson(R), x: 0, z: 0, h: 0, ai: null, side: R() < 0.5 ? 1 : -1, speed: 1.1 + R() * 0.6, dodge: 0, dvx: 0, dvz: 0, down: 0, y: 0, vy: 0, bubbleT: 0 };
   scene.add(p.mesh); peds.push(p); return p;
 }
+let townGrid = null;
 function placePed(p, minD, maxD) {
+  if (!townGrid) townGrid = makeVertGrid(townVerts);
+  const cand = vertsInRing(townGrid, minD, maxD); if (!cand.length) return false;
   for (let tries = 0; tries < 60; tries++) {
-    const v = townVerts[Math.floor(R() * townVerts.length)];
-    const d = Math.hypot(vx(v) - P.x, vz(v) - P.z); if (d < minD || d > maxD) continue;
+    const v = cand[Math.floor(R() * cand.length)];
     const e = W.walkAdj[v][Math.floor(R() * W.walkAdj[v].length)];
     const off = pedOff(e, p);
     const [tx, tz] = laneTarget(e.to, v, -off);
@@ -363,7 +381,9 @@ function startMission(g) {
     mission = { id: 'pane', title: t('missions.pane.title'), steps: [{ x: d.rx, z: d.rz, text: t('missions.pane.step', { dest: d.name }) }], time: Math.round(dist / 9 + 25), reward: Math.round(40 + dist / 12) };
     toast(t('missions.pane.loaded', { dest: d.name }));
   } else if (g.id === 'taxi') {
-    let pv; for (let k = 0; k < 50; k++) { pv = townVerts[Math.floor(R() * townVerts.length)]; const d = Math.hypot(vx(pv) - P.x, vz(pv) - P.z); if (d > 150 && d < 550) break; }
+    if (!townGrid) townGrid = makeVertGrid(townVerts);
+    const ringV = vertsInRing(townGrid, 150, 550), pool = ringV.length ? ringV : townVerts;
+    const pv = pool[Math.floor(R() * pool.length)];
     const dv = W.nearestDriveVert(vx(pv), vz(pv));
     const cands = DESTS.filter(p => Math.hypot(p.rx - vx(dv), p.rz - vz(dv)) > 250);
     const d = cands[Math.floor(R() * cands.length)] || DESTS[0];
@@ -514,11 +534,12 @@ function syncCops() {
 }
 function spawnCop() {
   let best = -1, bd = 1e9;
-  for (let k = 0; k < 140; k++) {
-    const v = W.driveVerts[Math.floor(R() * W.driveVerts.length)];
-    const d = Math.hypot(vx(v) - P.x, vz(v) - P.z);
-    if (d < 70 || d > 240) continue;
-    const score = Math.abs(d - 130);
+  if (!driveGrid) driveGrid = makeVertGrid(W.driveVerts);
+  let cand = vertsInRing(driveGrid, 70, 240);
+  if (!cand.length) cand = vertsInRing(driveGrid, 30, 600); // in aperta campagna le strade sono rade
+  for (let k = 0; k < 40 && cand.length; k++) {
+    const v = cand[Math.floor(R() * cand.length)];
+    const score = Math.abs(Math.hypot(vx(v) - P.x, vz(v) - P.z) - 130);
     if (score < bd) { bd = score; best = v; }
   }
   if (best < 0) return null;
