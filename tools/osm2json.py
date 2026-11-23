@@ -7,6 +7,22 @@ import xml.etree.ElementTree as ET
 
 src, dst = sys.argv[1], sys.argv[2]
 root = ET.parse(src).getroot()
+
+# Correzioni locali (data/correzioni.json): elementi da togliere e tag da aggiungere o cambiare.
+import json as _json, os as _os
+_cpath = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', 'data', 'correzioni.json')
+if _os.path.exists(_cpath):
+    _corr = _json.load(open(_cpath, encoding='utf-8'))
+    _rm = set(_corr.get('rimuovi', {})); _tg = _corr.get('tag', {})
+    for el in list(root):
+        i = el.get('id')
+        if i in _rm: root.remove(el); continue
+        if i in _tg:
+            for k, v in _tg[i].items():
+                t = next((t for t in el.findall('tag') if t.get('k') == k), None)
+                if t is None: ET.SubElement(el, 'tag', {'k': k, 'v': v})
+                else: t.set('v', v)
+    print('correzioni:', len(_rm), 'rimossi,', len(_tg), 'modificati')
 import os
 b = root.find('bounds')
 if b is None:  # estratti Overpass per confine comunale: il riquadro si ricava dai nodi
@@ -149,9 +165,13 @@ for wid, (nd, t) in ways.items():
         ids = [n for n in nd if n in nodes]
         for n in ids:
             if n not in gidx: gidx[n] = len(gv) // 2; gv.extend(nodes[n])
+        # senso unico: esplicito, al contrario (-1) o implicito nelle rotonde (in Italia antiorarie)
+        ow = t.get('oneway')
+        if ow == '-1': ids = ids[::-1]; p = [v for k in range(len(p) - 2, -2, -2) for v in p[k:k + 2]]
         r = {'t': hw, 'w': ROADW[hw], 'p': p, 'i': [gidx[n] for n in ids]}
         if t.get('name'): r['n'] = t['name']
-        if t.get('oneway') in ('yes', '1'): r['o'] = 1
+        if ow in ('yes', '1', 'true', '-1') or (t.get('junction') in ('roundabout', 'circular') and ow != 'no'): r['o'] = 1
+        if t.get('junction') in ('roundabout', 'circular'): r['j'] = 1
         if t.get('bridge') == 'yes': r['b'] = 1
         roads.append(r)
         continue

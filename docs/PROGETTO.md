@@ -31,11 +31,11 @@ POI con nome:
 | Nome | Tipo OSM |
 |---|---|
 | Panificio Ada | shop=general |
-| Benassi & Cavaletti Snc | shop=bakery |
 | MD | shop=supermarket |
 | Alice | amenity=bar |
 | K2 | amenity=ice_cream |
 | Aquila D'Oro | amenity=restaurant |
+| Bar Ristorante Yang (via De Amicis 6) | amenity=restaurant, nome aggiunto in `data/correzioni.json` |
 | IP | amenity=fuel |
 | Intesa Sanpaolo | amenity=bank |
 | Banca Agricola Mantovana | amenity=bank |
@@ -199,6 +199,16 @@ npm test              # test Playwright (richiede npx playwright install chromiu
 
 `data/moglia.json` è un database derivato da OSM: resta sotto ODbL. Non va modificato a mano per aggiungere luoghi: si aggiorna il dato OSM e si rigenera.
 
+## Correzioni ai dati OSM
+
+`data/correzioni.json` viene applicato da `tools/osm2json.py` a ogni conversione, quindi resta valido anche quando si riscaricano i dati:
+- `rimuovi`: elementi OSM da togliere (id → motivo). Benassi & Cavaletti (via Garibaldi) è stato tolto il 23/11/2026 perché l'attività ha chiuso.
+- `tag`: tag da aggiungere o correggere. Il ristorante senza nome in via De Amicis è diventato "Bar Ristorante Yang", via De Amicis 6.
+
+Se un'attività chiude o apre, conviene correggere anche OpenStreetMap: così il dato migliora per tutti.
+
+Le rotonde (`junction=roundabout`) sono a senso unico anche senza `oneway=yes` e in OSM sono disegnate nel verso di marcia, cioè antiorario: il convertitore le segna con `o: 1` e `j: 1`. Gestito anche `oneway=-1` (senso unico al contrario).
+
 ## Edifici dalle foto (Piazza Marconi)
 
 Foto del committente del 22/11/2026, ore 12:02–12:04 (dal nome dei file `PXL_…`). Le copie caricate in chat non avevano più i dati EXIF (GPS e bussola tolti dal ridimensionamento), quindi gli edifici sono stati individuati dal contenuto delle foto incrociato con OSM:
@@ -207,7 +217,8 @@ Foto del committente del 22/11/2026, ore 12:02–12:04 (dal nome dei file `PXL_�
 |---|---|---|---|
 | 1 | Palazzo con negozi, pensilina e bar "Alice Caffè" | POI bar "Alice" | #337, lato est verso la piazza |
 | 5 | Intesa Sanpaolo, ocra con zoccolo in pietra | POI "Intesa Sanpaolo" | #857 |
-| 3 | Palazzina verde con piano terra a mosaico, ristorante Yang a fianco | POI ristorante, imbocco di via De Amicis | #1674 |
+| 3 | Palazzina verde con piano terra a mosaico (parte verso la piazza della sagoma) |
+| Street View 23/11 | Bar Ristorante Yang: casa bassa in coppi, porta a pagoda, tenda a righe, fioriere, insegna | POI ristorante | stessa sagoma, parte lungo via De Amicis | POI ristorante, imbocco di via De Amicis | #1674 |
 | 4 | Edificio in cemento a portico dietro la fontana | POI fountain | #1148 |
 | 4 | Fontana ottagonale con sfera nera su isola di ghiaia bianca | POI fountain | arredo |
 | 3, 5 | Monumento "Moglia" (2012) su isola di ghiaia | baricentro dei nodi di via De Amicis | arredo |

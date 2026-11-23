@@ -36,6 +36,9 @@ const SPECS = [
     h: 10.6, g: 3.8, floorH: 3.4, bay: 3.2,
     wall: '#dcebd3', ground: 'mosaic', win: { w: 1.25, h: 1.25, frame: '#eef2ea', shutter: '#f1efe8', open: 0.25 }, topWin: { w: 1.3, h: 0.55 },
     roof: { type: 'flat', color: '#e9ece4' }, cornice: '#f4f5f0', canopy: { y: 3.75, depth: 1.1, color: '#2f3331' },
+    // la sagoma OSM comprende anche il Bar Ristorante Yang (via De Amicis 6): si divide lungo via De Amicis.
+    // o = imbocco della via, t = direzione della via, s = metri dall'imbocco dove finisce la palazzina
+    split: { o: [169, 183], t: [0.467, 0.888], s: 4, yang: true },
   },
   {
     id: 'portico', anchor: [166, 154], face: [150, 150],
@@ -197,7 +200,12 @@ export function buildFotorilievi(D, W, scene, prep) {
   const built = [];
   for (const { spec: s, bi } of prep.list) {
     const rec = W.blds.find(b => b.src === bi); if (!rec) continue;
-    buildOne(s, rec, root); built.push({ id: s.id, bi, x: rec.cx, z: rec.cz });
+    if (s.split) {
+      const a = clipHalf(rec.p, s.split, false), b = clipHalf(rec.p, s.split, true);
+      if (a) buildOne(s, { ...rec, p: a }, root);
+      if (b && s.split.yang) { buildYang(b, root); built.push({ id: 'yang', bi }); }
+    } else buildOne(s, rec, root);
+    built.push({ id: s.id, bi, x: rec.cx, z: rec.cz });
   }
   if (prep.fountain) buildFountain(prep.fountain.x, prep.fountain.z, W, root);
   const mon = monumentSpot(D); if (mon) buildMonument(mon, W, root);
@@ -355,4 +363,124 @@ function buildMonument(m, W, root) {
     const d = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.04, 20), M('#2a2c2e')); d.rotation.x = Math.PI / 2; d.position.set(sx, 1.25, pole.position.z); g.add(d);
   }
   addCircleObstacle(W, m.x, m.z, 1.6, 6);
+}
+
+// ---- divisione di una sagoma con un piano perpendicolare alla strada ---------
+function clipHalf(p, sp, beyond) {
+  const [ox, oz] = sp.o, [tx, tz] = sp.t, f = (x, z) => ((x - ox) * tx + (z - oz) * tz - sp.s) * (beyond ? 1 : -1);
+  const pts = []; for (let i = 0; i < p.length; i += 2) pts.push([p[i], p[i + 1]]);
+  const out = [];
+  for (let i = 0; i < pts.length; i++) {
+    const a = pts[(i + pts.length - 1) % pts.length], b = pts[i], fa = f(a[0], a[1]), fb = f(b[0], b[1]);
+    if (fb >= 0) { if (fa < 0) { const t = fa / (fa - fb); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); } out.push(b); }
+    else if (fa >= 0) { const t = fa / (fa - fb); out.push([a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]); }
+  }
+  return out.length >= 3 ? out.flat() : null;
+}
+
+// ---- Bar Ristorante Yang, via De Amicis 6 (foto del 23/11/2026) -------------
+// casa bassa col tetto in coppi, dehors con fioriere e siepi, porta a pagoda rossa
+// a due tetti, tenda a righe con bordo smerlato, lampioni a globo, insegna su palo
+function buildYang(p, root) {
+  const E = edgesOf(p);
+  let cx = 0, cz = 0; for (let i = 0; i < p.length; i += 2) { cx += p[i]; cz += p[i + 1]; } cx /= p.length / 2; cz /= p.length / 2;
+  const road = [cx + 0.888 * 30, cz - 0.467 * 30]; // via De Amicis è a nord-est della sagoma
+  const F = E.filter(e => e.L > 4).sort((a, b) => facing(b, road) - facing(a, road))[0]; if (!F) return;
+  let D = 0; for (let i = 0; i < p.length; i += 2) D = Math.max(D, -((p[i] - F.ax) * F.nx + (p[i + 1] - F.az) * F.nz));
+  D = Math.min(D, 16);
+  const L = F.L, DD = 3.4, BD = Math.max(5, D - DD - 0.3), WH = 3.6;
+  const g = new THREE.Group(); g.position.set(F.ax, 0, F.az); g.rotation.y = Math.atan2(-F.tz, F.tx); root.add(g);
+  const add = (o) => { o.castShadow = true; o.receiveShadow = true; g.add(o); return o; };
+  const B = (w, h, d, m, x, y, z) => add(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m)).position.set(x, y, z);
+
+  // pavimento del dehors
+  const tiles = canvasTex(64, 64, (c, w, h) => { noise(c, w, h, '#b9b3ab', 0.08, 300, R); c.strokeStyle = 'rgba(70,65,60,.35)'; for (let k = 0; k <= w; k += 16) { c.beginPath(); c.moveTo(k, 0); c.lineTo(k, h); c.moveTo(0, k); c.lineTo(w, k); c.stroke(); } });
+  tiles.repeat.set(L / 1.6, DD / 1.6);
+  const fl = new THREE.Mesh(new THREE.PlaneGeometry(L, DD), new THREE.MeshLambertMaterial({ map: tiles })); fl.rotation.x = -Math.PI / 2; fl.position.set(L / 2, 0.05, -DD / 2); fl.receiveShadow = true; g.add(fl);
+
+  // edificio basso
+  const wall = M('#e6d9c4');
+  const body = new THREE.Mesh(new THREE.BoxGeometry(L, WH, BD), wall); body.position.set(L / 2, WH / 2, -DD - BD / 2); add(body);
+  const facade = canvasTex(512, 160, (c, w, h) => {
+    stucco(c, w, h, '#e6d9c4', 0.04);
+    const door = (x, wd) => { c.fillStyle = '#b3261e'; c.fillRect(x - 6, 30, wd + 12, h - 30); c.fillStyle = '#3b2a22'; c.fillRect(x, 38, wd, h - 38); c.fillStyle = '#6d5a4a'; for (let k = 0; k < 4; k++) c.fillRect(x + 4, 44 + k * 28, wd - 8, 3); };
+    const win = (x, wd) => { c.fillStyle = '#5d7a52'; c.fillRect(x - 4, 40, wd + 8, h - 58); c.fillStyle = '#2b3439'; c.fillRect(x, 44, wd, h - 66); c.fillStyle = '#5d7a52'; c.fillRect(x + wd / 2 - 2, 44, 4, h - 66); };
+    door(40, 46); win(120, 70); door(230, 52); win(320, 70); win(420, 60);
+  });
+  const fp = new THREE.Mesh(new THREE.PlaneGeometry(L, WH), new THREE.MeshLambertMaterial({ map: facade })); fp.position.set(L / 2, WH / 2, -DD + 0.01); g.add(fp);
+  // tetto a padiglione in coppi
+  const coppi = canvasTex(64, 64, (c, w, h) => { noise(c, w, h, '#a5573a', 0.12, 400, R); c.fillStyle = 'rgba(60,25,15,.35)'; for (let y = 0; y < h; y += 8) c.fillRect(0, y, w, 2); for (let x = 0; x < w; x += 6) c.fillRect(x, 0, 1, h); });
+  coppi.repeat.set(3, 3);
+  const roof = new THREE.Mesh(new THREE.ConeGeometry(0.7071, 1, 4, 1), new THREE.MeshLambertMaterial({ map: coppi }));
+  roof.rotation.y = Math.PI / 4; const rg = new THREE.Group(); rg.add(roof); rg.position.set(L / 2, WH + 0.75, -DD - BD / 2); rg.scale.set(L + 0.8, 1.5, BD + 0.8); g.add(rg); roof.castShadow = true;
+  B(L + 0.7, 0.18, 0.5, M('#e9e2d4'), L / 2, WH + 0.05, -DD + 0.15); // gronda
+
+  // porta a pagoda
+  const red = new THREE.MeshPhongMaterial({ color: '#c3271c', shininess: 40, specular: 0x331111 }), roofRed = M('#a83322');
+  const pg = Math.min(4.2, L * 0.33), gz = -0.6;
+  for (const sx of [-1, 1]) {
+    const col = add(new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.19, 3.4, 12), red)); col.position.set(pg + sx * 1.05, 1.7, gz);
+    const base = add(new THREE.Mesh(new THREE.SphereGeometry(0.32, 12, 8), M('#151515'))); base.scale.y = 0.6; base.position.set(pg + sx * 1.05, 0.2, gz);
+  }
+  B(2.7, 0.26, 0.42, red, pg, 3.15, gz); B(2.4, 0.18, 0.36, red, pg, 2.7, gz);
+  const plaque = canvasTex(256, 64, (c, w, h) => { c.fillStyle = '#1c1a18'; c.fillRect(0, 0, w, h); c.strokeStyle = '#c9a44a'; c.lineWidth = 4; c.strokeRect(4, 4, w - 8, h - 8); c.fillStyle = '#c9a44a'; for (let k = 0; k < 4; k++) c.fillRect(40 + k * 50, 18, 22, 28); });
+  const pl = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 0.38), new THREE.MeshBasicMaterial({ map: plaque })); pl.position.set(pg, 3.72, gz + 0.22); g.add(pl);
+  B(1.6, 0.5, 0.36, red, pg, 3.72, gz);
+  const slats = canvasTex(64, 32, (c, w, h) => { c.fillStyle = '#a83322'; c.fillRect(0, 0, w, h); c.fillStyle = '#7d2317'; for (let x = 0; x < w; x += 5) c.fillRect(x, 0, 2, h); });
+  const tier = (y, w, d, hgt) => {
+    const t = new THREE.Mesh(new THREE.ConeGeometry(0.7071, 1, 4, 1), new THREE.MeshLambertMaterial({ map: slats }));
+    t.rotation.y = Math.PI / 4; const tg = new THREE.Group(); tg.add(t); tg.position.set(pg, y + hgt / 2, gz); tg.scale.set(w, hgt, d); g.add(tg); t.castShadow = true;
+    // punte rialzate delle falde
+    for (const [sx, sz] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) { const tip = add(new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.08, 0.14), roofRed)); tip.position.set(pg + sx * w * 0.5, y + 0.12, gz + sz * d * 0.5); tip.rotation.set(0, sx * sz * Math.PI / 4, sx * 0.45); }
+    B(w * 0.98, 0.08, d * 0.98, roofRed, pg, y, gz);
+  };
+  tier(3.3, 4.0, 2.2, 0.55); tier(4.0, 3.0, 1.7, 0.65);
+  B(0.9, 0.12, 0.12, roofRed, pg, 4.66, gz);
+
+  // tenda a righe con bordo smerlato
+  const stripes = canvasTex(256, 64, (c, w, h) => { c.fillStyle = '#efe4d3'; c.fillRect(0, 0, w, h); const cols = ['#c98a86', '#d9b1a5', '#b8615a']; for (let x = 0, k = 0; x < w; x += 14, k++) { c.fillStyle = cols[k % 3]; c.fillRect(x, 0, k % 2 ? 3 : 6, h); } });
+  const scallop = canvasTex(256, 32, (c, w, h) => { c.clearRect(0, 0, w, h); c.fillStyle = '#efe4d3'; c.fillRect(0, 0, w, h * 0.45); for (let x = 0; x < w; x += 16) { c.beginPath(); c.arc(x + 8, h * 0.45, 8, 0, Math.PI); c.fill(); } const cols = ['#c98a86', '#b8615a']; for (let x = 0, k = 0; x < w; x += 14, k++) { c.fillStyle = cols[k % 2]; c.globalCompositeOperation = 'source-atop'; c.fillRect(x, 0, 5, h); c.globalCompositeOperation = 'source-over'; } }, false);
+  const ax0 = pg + 1.6, aw = L - ax0 + 0.2, run = DD - 0.5, drop = 0.7, slope = Math.hypot(run, drop);
+  stripes.repeat.set(aw / 3, 1);
+  const awn = new THREE.Mesh(new THREE.PlaneGeometry(aw, slope), new THREE.MeshLambertMaterial({ map: stripes, side: THREE.DoubleSide }));
+  awn.position.set(ax0 + aw / 2, 3.1 - drop / 2, -DD + run / 2); awn.rotation.x = -Math.PI / 2 + Math.atan2(drop, run); awn.castShadow = true; g.add(awn);
+  scallop.wrapS = THREE.RepeatWrapping; scallop.repeat.set(aw / 1.6, 1);
+  const val = new THREE.Mesh(new THREE.PlaneGeometry(aw, 0.35), new THREE.MeshLambertMaterial({ map: scallop, transparent: true, side: THREE.DoubleSide, alphaTest: 0.4 }));
+  val.position.set(ax0 + aw / 2, 3.1 - drop - 0.17, -DD + run); g.add(val);
+  const awn2 = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1.6), awn.material); awn2.position.set(pg, 2.9, -DD + 0.7); awn2.rotation.x = -Math.PI / 2 + 0.35; g.add(awn2);
+  for (const u of [ax0 + 0.1, L - 0.1]) B(0.05, 2.5, 0.05, M('#d8d2c8'), u, 1.25, -0.55);
+
+  // fioriere in graniglia con siepi (varco davanti alla pagoda)
+  const grit = canvasTex(64, 32, (c, w, h) => { noise(c, w, h, '#c9c3b8', 0.1, 300, R); for (let k = 0; k < 400; k++) { c.fillStyle = R() < 0.5 ? '#8f877c' : '#efebe4'; c.fillRect(R() * w, R() * h, 1.5, 1.5); } });
+  const gritM = new THREE.MeshLambertMaterial({ map: grit });
+  const hedge = canvasTex(64, 64, (c, w, h) => { noise(c, w, h, '#3f7a35', 0.3, 1200, R); for (let k = 0; k < 300; k++) { c.fillStyle = R() < 0.5 ? '#2c5a26' : '#6aa452'; c.fillRect(R() * w, R() * h, 3, 2); } });
+  const hedgeM = new THREE.MeshLambertMaterial({ map: hedge });
+  for (let u = 0.2; u < L - 1.0; u += 1.7) {
+    if (u + 1.6 > pg - 0.8 && u < pg + 0.8) continue;
+    B(1.6, 0.55, 0.55, gritM, u + 0.8, 0.28, -0.3);
+    const hd = add(new THREE.Mesh(new THREE.BoxGeometry(1.55, 0.85, 0.6), hedgeM)); hd.position.set(u + 0.8, 0.95, -0.3); hd.scale.set(1, 1 + R() * 0.25, 1);
+  }
+  // lampioni a globo
+  const globe = new THREE.MeshBasicMaterial({ color: '#f6f3ea' });
+  for (const u of [pg - 1.7, pg + 1.45, pg + 3.4]) {
+    B(0.06, 1.75, 0.06, M('#2a2a2a'), u, 0.9, -0.05);
+    const s = new THREE.Mesh(new THREE.SphereGeometry(0.2, 14, 10), globe); s.position.set(u, 1.9, -0.05); g.add(s);
+  }
+  // tavoli e sedie blu
+  const cloth = M('#e9cfc5'), blue = M('#2350b8');
+  for (const [u, v] of [[ax0 + 1.0, -2.3], [ax0 + 2.6, -2.3], [ax0 + 4.2, -2.3], [ax0 + 1.8, -1.2], [ax0 + 3.4, -1.2], [pg - 0.4, -2.4]]) {
+    if (u > L - 0.6) continue;
+    B(0.8, 0.04, 0.8, cloth, u, 0.76, v); B(0.06, 0.74, 0.06, M('#555'), u, 0.37, v);
+    for (const d of [-0.62, 0.62]) { B(0.42, 0.06, 0.42, blue, u + d, 0.45, v); B(0.42, 0.45, 0.05, blue, u + d * 1.35, 0.7, v); }
+  }
+  // insegna su palo
+  const signT = canvasTex(256, 300, (c, w, h) => {
+    c.fillStyle = '#f2f0ea'; c.fillRect(0, 0, w, h); c.strokeStyle = '#9aa0a6'; c.lineWidth = 6; c.strokeRect(3, 3, w - 6, h - 6);
+    c.fillStyle = '#2a3f8f'; c.textAlign = 'center'; c.font = '700 34px Georgia, serif'; c.fillText('RISTORANTE', w / 2, 62); c.font = '800 44px Georgia, serif'; c.fillText('BAR', w / 2, 118);
+    c.font = 'italic 700 64px Georgia, serif'; c.fillText('Yang', w / 2, 190); c.fillStyle = '#c3271c'; c.fillRect(30, 224, w - 60, 6); c.fillStyle = '#2a3f8f'; c.font = '600 22px system-ui'; c.fillText('Via De Amicis 6', w / 2, 266);
+  }, false);
+  const sm = new THREE.MeshBasicMaterial({ map: signT });
+  B(0.09, 4.4, 0.09, M('#8d9196'), -0.4, 2.2, 0.5);
+  for (const [z, ry] of [[0.55, 0], [0.45, Math.PI]]) { const pl2 = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.4), sm); pl2.position.set(-0.4, 3.4, z); pl2.rotation.y = ry; g.add(pl2); }
+  B(1.24, 1.44, 0.08, M('#d9dadc'), -0.4, 3.4, 0.5);
 }

@@ -1,0 +1,14 @@
+{
+  "_nota": "Correzioni locali ai dati OpenStreetMap, applicate da tools/osm2json.py a ogni conversione. Chiavi: id OSM dell'elemento (nodo, via o relazione).",
+  "rimuovi": {
+    "9779406925": "Benassi & Cavaletti Snc (via Garibaldi): attività chiusa, segnalato il 23/11/2026"
+  },
+  "tag": {
+    "9779406924": {
+      "name": "Bar Ristorante Yang",
+      "addr:street": "Via Edmondo De Amicis",
+      "addr:housenumber": "6",
+      "amenity": "restaurant"
+    }
+  }
+}
